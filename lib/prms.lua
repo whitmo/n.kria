@@ -4,10 +4,13 @@ WHAT GOES IN THIS FILE:
 ]]
 --
 
-local nb = include('n.kria/lib/nb/lib/nb')
+local nb = include('lib/nb/lib/nb')
 
-local data = include('n.kria/lib/data_functions')
-local rw = include('n.kria/lib/pset_rewriter')
+local data = include('lib/data_functions')
+local rw = include('lib/pset_rewriter')
+local globals = include("lib/globals")
+local defaults = globals.defaults
+local tu = require 'tabutil'
 
 Prms = {}
 
@@ -32,6 +35,7 @@ function Prms:script_mode_switch()
 		}
 	}
 	params:set_action('script_mode', function(x)
+			     -- create global symbol for mode state
 		for _, v in pairs(extended_param_names.globals) do
 			if x == 2 then
 				params:show('global_' .. v)
@@ -96,72 +100,79 @@ params.action_write = function(filename, name, pset_number)
 end
 
 function Prms:add_globals()
-	data:add_binary('playing', 'PLAYING?', 'toggle')
-	data:add_number('root_note', 'ROOT NOTE', 0, 11, 0,
-		function(x) return mu.note_num_to_name(x.value) end
-	)
-	data:add_number('stretch', 'STRETCH', -32, 32, 0,
-		function(x) return x.value > 0 and '+' .. x.value or x.value end
-	)
-	data:add_number('push', 'PUSH', -15, 14, 0,
-		function(x) return x.value > 0 and '+' .. x.value or x.value end
-	)
-	data:add_number('swing', 'SWING', 50, 99, 55, function(x) return x.value .. '%' end)
-	data:add_number('clock_div', 'CLOCK DIVISION', 1, 16, 1,
-		function(x) return division_names[x.value] end
-	)
+   local new_env = tu.update(_ENV, globals.defaults)
+   local _ENV = new_env
+   
+   data:add_binary('playing', 'PLAYING?', 'toggle')
+   data:add_number('root_note', 'ROOT NOTE', 0, 11, 0,
+		   function(x) return mu.note_num_to_name(x.value) end
+   )
+   data:add_number('stretch', 'STRETCH', -32, 32, 0,
+		   function(x) return x.value > 0 and '+' .. x.value or x.value end
+   )
+   data:add_number('push', 'PUSH', -15, 14, 0,
+		   function(x) return x.value > 0 and '+' .. x.value or x.value end
+   )
+   data:add_number('swing', 'SWING', 50, 99, 55, function(x) return x.value .. '%' end)
+   
+   data:add_number('clock_div', 'CLOCK DIVISION', 1, 16, 1,
+		   function(x)
+		      return defaults.division_names[x.value]
+		   end
+   )
+   params:add_option('script_mode', 'SCRIPT MODE', { 'classic', 'extended' }, 1)
 
-	params:add_option('script_mode', 'SCRIPT MODE', { 'classic', 'extended' }, 1)
+   params:add_group('OPTIONS', 7)
+   data:add_binary('note_div_sync', 'NOTE DIV SYNC', 'toggle')
+   data:add_binary('div_cue', 'DIV CUE', 'toggle')
+   
+   data:add_option('div_sync', 'DIV SYNC', div_sync_modes)
+   data:add_binary('note_sync', 'NOTE SYNC', 'toggle')
+   data:add_option('loop_sync', 'LOOP SYNC', div_sync_modes)
+   data:add_trigger('reset_all', 'RESET')
+   data:set_action('reset_all', function(x) meta:reset_all() end)
+   data:add_trigger('advance_all', 'ADVANCE ALL')
+   data:set_action('advance_all', function() meta:advance_all() end)
 
-	params:add_group('OPTIONS', 7)
-	data:add_binary('note_div_sync', 'NOTE DIV SYNC', 'toggle')
-	data:add_binary('div_cue', 'DIV CUE', 'toggle')
-	data:add_option('div_sync', 'DIV SYNC', div_sync_modes)
-	data:add_binary('note_sync', 'NOTE SYNC', 'toggle')
-	data:add_option('loop_sync', 'LOOP SYNC', div_sync_modes)
-	data:add_trigger('reset_all', 'RESET')
-	data:set_action('reset_all', function(x) meta:reset_all() end)
-	data:add_trigger('advance_all', 'ADVANCE ALL')
-	data:set_action('advance_all', function() meta:advance_all() end)
+   params:add_group('GLOBAL DATA', 12)
+   data:add_binary('swing_this_step', 'swing_this_step', 'toggle')
+   data:add_number('active_track', 'active track', 1, NUM_TRACKS, 1)
+   data:add_option('mod', 'mod key held', mod_names, 1)
+   data:add_number('scale_num', 'selected scale', 1, NUM_SCALES, 1)
+   data:add_option('overlay', 'overlay', overlay_names, 1)
+   data:add_option('patcher', 'patcher', patchers, 1)
+   data:add_number('page', 'page', 1, 6, 1)
+   data:add_binary('alt_page', 'alt page?', 'toggle')
+   data:add_number('active_pattern', 'pattern', 1, NUM_PATTERNS, 1)
+   data:set_action('active_pattern', function(x) data.pattern = x end)
+   data:add_number('cued_pattern', 'cued pattern', 0, 99, 1)
+   data:add_number('pattern_quant', 'pattern_quant', 1, 99, 1)
+   data:add_number('pattern_quant_pos', 'pattern_quant_pos', 1, 99, 1)
+   params:hide('GLOBAL DATA')
 
-	params:add_group('GLOBAL DATA', 12)
-	data:add_binary('swing_this_step', 'swing_this_step', 'toggle')
-	data:add_number('active_track', 'active track', 1, NUM_TRACKS, 1)
-	data:add_option('mod', 'mod key held', mod_names, 1)
-	data:add_number('scale_num', 'selected scale', 1, NUM_SCALES, 1)
-	data:add_option('overlay', 'overlay', overlay_names, 1)
-	data:add_option('patcher', 'patcher', patchers, 1)
-	data:add_number('page', 'page', 1, 6, 1)
-	data:add_binary('alt_page', 'alt page?', 'toggle')
-	data:add_number('active_pattern', 'pattern', 1, NUM_PATTERNS, 1)
-	data:set_action('active_pattern', function(x) data.pattern = x end)
-	data:add_number('cued_pattern', 'cued pattern', 0, 99, 1)
-	data:add_number('pattern_quant', 'pattern_quant', 1, 99, 1)
-	data:add_number('pattern_quant_pos', 'pattern_quant_pos', 1, 99, 1)
-	params:hide('GLOBAL DATA')
+   params:add_group('ms_data', 134) -- meta-sequence
+   data:add_number('ms_first', 'ms_loop_first', 1, 64, 1)
+   data:add_number('ms_last', 'ms_loop_last', 1, 64, 4)
+   data:add_number('ms_pos', 'ms_pos', 1, 64, 1)
+   data:add_number('ms_cursor', 'ms_cursor', 1, 64, 1)
+   data:add_number('ms_duration_pos', 'ms_duration_pos', 1, 99, 1)
+   data:add_binary('ms_active', 'ms_active', 'toggle')
+   
+   for i = 1, 64 do
+      data:add_number('ms_pattern_' .. i, 'ms_' .. i .. '_pattern', 1, 64, 1)
+      data:add_number('ms_duration_' .. i, 'ms_' .. i .. '_duration', 1, 16, 1)
+   end
+   params:hide('ms_data')
 
-	params:add_group('ms_data', 134) -- meta-sequence
-	data:add_number('ms_first', 'ms_loop_first', 1, 64, 1)
-	data:add_number('ms_last', 'ms_loop_last', 1, 64, 4)
-	data:add_number('ms_pos', 'ms_pos', 1, 64, 1)
-	data:add_number('ms_cursor', 'ms_cursor', 1, 64, 1)
-	data:add_number('ms_duration_pos', 'ms_duration_pos', 1, 99, 1)
-	data:add_binary('ms_active', 'ms_active', 'toggle')
-	for i = 1, 64 do
-		data:add_number('ms_pattern_' .. i, 'ms_' .. i .. '_pattern', 1, 64, 1)
-		data:add_number('ms_duration_' .. i, 'ms_' .. i .. '_duration', 1, 16, 1)
-	end
-	params:hide('ms_data')
-
-	params:add_group('scale data', 112)
-	for i = 1, 16 do
-		local scale = data.scales[i]
-		for j = 1, 7 do
-			local default_value = scale_defaults[i][j]
-			scale:add_number(j, 'scale_' .. i .. '_deg_' .. j, 0, 7, default_value)
-		end
-	end
-	params:hide('scale data')
+   params:add_group('scale data', 112)
+   for i = 1, 16 do
+      local scale = data.scales[i]
+      for j = 1, 7 do
+	 local default_value = scale_defaults[i][j]
+	 scale:add_number(j, 'scale_' .. i .. '_deg_' .. j, 0, 7, default_value)
+      end
+   end
+   params:hide('scale data')
 end
 
 function Prms:add_tracks()

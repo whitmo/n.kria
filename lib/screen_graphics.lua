@@ -7,6 +7,8 @@ Graphics = {
 	history = {} -- keys are unique. values are like {track: 1, note: "A", beats: 234}
 }
 
+local data = include('lib/data_functions')
+
 function Graphics:render()
 	s = screen
 	s.clear()
@@ -16,10 +18,11 @@ function Graphics:render()
 	self:right_windows()
 	self:scale()
 
-	if get_overlay() == 'time' then
+	local overlay = data:get_overlay()
+	if overlay == 'time' then
 		self:description_window()
 		self:time_descriptions()
-	elseif get_overlay() == 'options' then
+	elseif overlay == 'options' then
 		self:description_window()
 		self:config_descriptions()
 	end

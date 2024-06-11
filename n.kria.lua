@@ -32,7 +32,11 @@ WHAT GOES IN THIS FILE:
 
 ]]--
 
-globals = include('lib/globals')
+local globals = include('lib/globals')
+_ENV = globals.merge(_ENV)
+
+local ctx = globals.context
+
 screen_graphics = include('lib/screen_graphics')
 grid_graphics = include('lib/grid_graphics')
 Prms = include('lib/prms')
@@ -45,6 +49,9 @@ hs = include('lib/dualdelay')
 nb = include("lib/nb/lib/nb")
 mu = require 'musicutil'
 
+local tu = require 'tabutil'
+local tab = tu
+
 -- hardware
 g = grid.connect()
 m = midi.connect()
@@ -56,8 +63,10 @@ if not matrix_status then matrix = nil end
 -- mods
 local toolkit_status = util.file_exists('/home/we/dust/code/toolkit')
 
+
+
 function init()
-	globals:add()
+	-- globals:add()
 	nb.voice_count = 4
 	nb:init()
 	Prms:add()
@@ -81,7 +90,7 @@ function init()
 	coros.intro = clock.run(intro)
 
 	last_touched_track = at()
-	last_touched_page = get_page_name()
+	ctx.last_touched_page = get_page_name()
 
 	print('n.kria launched successfully')
 end
@@ -247,13 +256,14 @@ end
 
 function redraw() screen_graphics:render() end 
 
+-- move to data
 function at() -- get active track
-	return data:get_global_val('active_track')
+   return data:get_global_val('active_track')
 end
 
 function set_active_track(n)
-	data:set_global_val('active_track',n)
-	post('track ' .. n)
+   data:set_global_val('active_track',n)
+   post('track ' .. n)
 end
 
 function ap() -- get active pattern
@@ -280,25 +290,6 @@ function out_of_bounds(track,p,value, real)
 	or 		(value > data:get_loop_last(track,p))
 end
 
-function get_page_name(page,alt)
-	local r
-	local page = page and page or data:get_global_val('page')
-	local alt = alt and alt or (data:get_global_val('alt_page') == 1)
-	r = alt and alt_page_names[page] or page_names[page]
-	return r
-end
-
-function get_display_page_name()
-	local p = get_page_name()
-	if p == "slide" then
-		local description = data:get_player(at()):describe()
-		if not description.supports_slew then
-			p = description.modulate_description
-		end
-	end
-	return p
-end
-
 function current_val(track,page)
 	return value_buffer[track][page]
 end
@@ -307,36 +298,12 @@ function get_mod_key()
 	return mod_names[data:get_global_val('mod')]
 end
 
-function get_overlay()
-	return overlay_names[data:get_global_val('overlay')]
-end
 
 function get_script_mode()
-	return params:string('script_mode')
+   return params:string('script_mode')
 end
 
-function set_overlay(name)
-	local num = tab.key(overlay_names,name)
-	num = util.clamp(num,1,get_script_mode()=='extended' and 4 or 3)
-	data:set_global_val('overlay',num)
-	post('overlay: '..get_overlay())
-end
 
-function track_key_held()
-	if kbuf[1][8] or kbuf[2][8] or kbuf[3][8] or kbuf [4][8] then
-		return last_touched_track
-	else
-		return 0
-	end
-end
-
-function page_key_held()
-	if kbuf[6][8] or kbuf[7][8] or kbuf[8][8] or kbuf[9][8] then
-		return last_touched_page
-	else
-		return 0
-	end
-end
 
 function highlight(l)
 	return util.clamp(l+2,0,15)
@@ -355,4 +322,9 @@ function dim(l) -- level number
 	end
 
 	return util.clamp(o,0,15)
+end
+
+function cleanup()
+   Data = nil
+   norns.state.context.nkria = nil
 end
