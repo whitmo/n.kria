@@ -3,9 +3,13 @@
    - everything related to pressing buttons on grid
 ]]--
 
-gkeys = {}
-
+local globals = include('lib/globals')
+local defaults = globals.defaults
+local ctx = globals.context
+local data = ctx.data
+local gkeys = {}
 local onboard = include('lib/onboard')
+
 
 function gkeys:time_overlay(x,y,z,t)
    if z == 1 then
@@ -50,7 +54,8 @@ function gkeys:config_overlay(x,y,z,t)
 end
 
 function gkeys:track_select(x,y,z,t)
-   last_touched_track = x
+   ctx.last_touched_track = x
+   local kbuf = ctx.kbuf
    if get_mod_key() == 'loop' and z == 1 then
       data:delta_track_val(x,'mute',1)
       post('t'..x..' '..((data:get_track_val(x,'mute') == 1) and 'mute' or 'unmute'))
@@ -98,12 +103,14 @@ end
 
 function gkeys:resolve_mod_keys() -- intentionally prioritizes leftmost held mod key
    local mod_key_held = 0
+   local kbuf = ctx.kbuf
    for i=1,3 do
       if kbuf[10+i][8] then
 	 mod_key_held = i
 	 break
       end
    end
+   
    data:set_global_val('mod', mod_key_held+1)
    if mod_key_held == 0 then
       loop_first = -1
@@ -118,6 +125,7 @@ function gkeys:resolve_mod_keys() -- intentionally prioritizes leftmost held mod
 end
 
 function gkeys:resolve_loop_keys(x,y,z,t)
+   local kbuf = ctx.kbuf
    if z == 1 then -- press
       if loop_first == -1 then
 	 if get_page_name() == 'pattern' then
@@ -273,6 +281,7 @@ function gkeys:prob_mod(x,y,z,t)
 end
 
 function gkeys:classic_scale(x,y,z,t)
+   local kbuf = ctx.kbuf
    if x < 9 and y > 5 and y < 8 and z == 1 then -- scale select
       local n = x + (y-6) * 8
       data:set_global_val('scale_num',n)
@@ -314,6 +323,7 @@ function gkeys:classic_scale(x,y,z,t)
 end
 
 function gkeys:extended_scale(x,y,z,t)
+   local kbuf = ctx.kbuf
    if x < 3 and z == 1 then -- scale select
       local n = y + (x-1) * 8
       data:set_global_val('scale_num',n)
@@ -343,6 +353,7 @@ function gkeys:extended_scale(x,y,z,t)
 end
 
 function gkeys:track_options(x,y,z,t)
+   local kbuf = ctx.kbuf   
    if z == 1 then
       local column
       set_active_track(util.clamp(util.round_up((x-2)/3),1,4))
@@ -352,6 +363,7 @@ function gkeys:track_options(x,y,z,t)
 end
 
 function gkeys:pattern_overlay(x,y,z,t)
+   local kbuf = ctx.kbuf   
    if y == 1 then
       if z == 1 then
 	 last_touched_pattern = x
@@ -373,6 +385,7 @@ function gkeys:pattern_overlay(x,y,z,t)
 end
 
 function gkeys:meta_sequence(x,y,z,t)
+   local kbuf = ctx.kbuf   
    if y == 1 then
       if z == 1 then
 	 last_touched_pattern = x
@@ -402,11 +415,13 @@ function gkeys:meta_sequence(x,y,z,t)
 end
 
 function gkeys:trig_page(x,y,z,t)
+   local kbuf = ctx.kbuf   
    data:delta_step_val(t,'trig',x,1)
    post('trig '..x..' '.. (data:get_step_val(t,'trig',x) == 1 and 'on' or 'off'))
 end
 
 function gkeys:retrig_page(x,y,z,t)
+   local kbuf = ctx.kbuf   
    if y == 1 or y == 7 then
       meta:delta_subtrig_count(t,x,(y==1 and 1 or -1))
    else
@@ -492,6 +507,7 @@ end
 
 function gkeys:key(x,y,z)
    -- print('grid:',x,y,z)
+   local kbuf = ctx.kbuf   
    kbuf[x][y] = (z == 1)
    local t
    if get_page_name() == 'trig' and y <= NUM_TRACKS then
