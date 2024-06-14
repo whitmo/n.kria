@@ -5,29 +5,30 @@ WHAT GOES IN THIS FILE:
 
 local globals = include('lib/globals')
 local ctx = globals.context
+
 local data = include('lib/data_functions')
 local tab = require 'tabutil'
+local transport = include('lib/transport')
 
 local Onboard = {}
 
 
-_ENV = globals:merge(_ENV)
-
 function Onboard:enc(n,d)
+   local script_mode = params:string('script_mode')
    if n == 1 then
       if onboard_key_states[1] then
 	 if coros.shift_e1 then clock.cancel(coros.shift_e1) end
 	 coros.shift_e1 = clock.run(menu_clock,2)
 	 data:delta_global_val('swing',d)
-	 post('swing: ' .. data:get_global_val('swing'))
+	 ctx.post('swing: ' .. data:get_global_val('swing'))
       else
 	 if coros.e1 then clock.cancel(coros.e1) end
 	 coros.e1 = clock.run(menu_clock,1)
 	 params:delta('clock_tempo',d)
-	 post('tempo: ' .. util.round(params:get('clock_tempo')))
+	 ctx.post('tempo: ' .. util.round(params:get('clock_tempo')))
       end
    elseif n == 2 then
-      if get_script_mode() == 'extended' then
+      if script_mode == 'extended' then
 	 if coros.e2 then clock.cancel(coros.e2) end
 	 coros.e2 = clock.run(menu_clock,3)
 	 if onboard_key_states[1] then
@@ -39,10 +40,10 @@ function Onboard:enc(n,d)
 	 else
 	    data:delta_global_val('stretch',d)
 	 end
-	 post('stretch: ' .. data:get_global_val('stretch'))
+	 ctx.post('stretch: ' .. data:get_global_val('stretch'))
       end
    elseif n == 3 then
-      if get_script_mode() == 'extended' then
+      if script_mode == 'extended' then
 	 if coros.e3 then clock.cancel(coros.e3) end
 	 coros.e3 = clock.run(menu_clock,4)
 	 if onboard_key_states[1] then
@@ -54,7 +55,7 @@ function Onboard:enc(n,d)
 	 else
 	    data:delta_global_val('push',d)
 	 end
-	 post('push: '.. data:get_global_val('push'))
+	 ctx.post('push: '.. data:get_global_val('push'))
       end
    end
 end
@@ -69,7 +70,7 @@ function Onboard:track_key_held()
 end
 
 function Onboard:page_key_held()
-   local kbuf = ctx.kbuf   
+   local kbuf = ctx.kbuf
    if kbuf[6][8] or kbuf[7][8] or kbuf[8][8] or kbuf[9][8] then
       return ctx.last_touched_page
    else
@@ -87,29 +88,29 @@ function Onboard:key(n,d)
       elseif onboard_key_states[1] then
 	 data:set_overlay((n==2) and 'time' or 'options')
       elseif (not onboard_key_states[1]) and (self:track_key_held()==0 and self:page_key_held()==0) then
-	 if n==2 then 
+	 if n==2 then
 	    transport:reset_all()
-	 elseif n==3 then 
+	 elseif n==3 then
 	    transport:play_pause()
 	 end
       elseif (not onboard_key_states[1]) and (self:track_key_held()~=0) then
 	 just_pressed_clipboard_key = true
 	 if n==2 then
-	    track_clipboard = meta:get_track_copy(last_touched_track)
-	    post('copied track '..last_touched_track)
+	    track_clipboard = meta:get_track_copy(ctx.last_touched_track)
+	    ctx.post('copied track '..ctx.last_touched_track)
 	 elseif n==3 then
-	    meta:paste_onto_track(last_touched_track, track_clipboard)
-	    post('pasted track '..last_touched_track)
+	    meta:paste_onto_track(ctx.last_touched_track, track_clipboard)
+	    ctx.post('pasted track '..ctx.last_touched_track)
 	 end
       elseif (not onboard_key_states[1]) and (self:page_key_held()~=0) then
 	 just_pressed_clipboard_key = true
 	 local p = get_page_name(last_touched_page)
 	 if n==2 then
-	    page_clipboards[p] = meta:get_page_copy(last_touched_track,p)
-	    post('copied page: t'..at()..' '..p)
+	    page_clipboards[p] = meta:get_page_copy(ctx.last_touched_track,p)
+	    ctx.post('copied page: t'..at()..' '..p)
 	 elseif n==3 then
 	    meta:paste_onto_page(at(),p,page_clipboards[p])
-	    post('pasted page: t'..at()..' '..p)
+	    ctx.post('pasted page: t'..at()..' '..p)
 	 end
       end
    end
@@ -117,21 +118,21 @@ end
 
 function Onboard:both_pressed()
    if self:track_key_held() == 0 and self:page_key_held() == 0 then
-      post('hold track/page to cut')
+      ctx.post('hold track/page to cut')
       return
    end
 
    if self:track_key_held() ~= 0 then
-      track_clipboard = meta:get_track_copy(last_touched_track)
-      meta:paste_onto_track(last_touched_track, meta:get_track_copy(0))
-      post('cut track '..last_touched_track)
+      track_clipboard = meta:get_track_copy(ctx.last_touched_track)
+      meta:paste_onto_track(ctx.last_touched_track, meta:get_track_copy(0))
+      ctx.post('cut track '.. ctx.last_touched_track)
    elseif self:page_key_held() ~= 0 then
       local p = get_page_name(last_touched_page)
-      page_clipboards[p] = meta:get_page_copy(last_touched_track,p)
+      page_clipboards[p] = meta:get_page_copy(ctx.last_touched_track,p)
       meta:paste_onto_page(at(),p,meta:get_track_copy(0)[p])
-      post('cut page: t'..at()..' '..p)
+      ctx.post('cut page: t'..at()..' '..p)
    end
-   
+
    just_pressed_clipboard_key = true
 
 end
