@@ -204,12 +204,24 @@ end
 
 context = norns.state.context
 
+local function post(str,intro)
+   -- second arg: send true if we shouldn't interrupt the intro sequence.
+   -- basically don't worry about it
+   context.nkria.post_buffer = str
+   if (not intro) and (coros.intro) then
+      clock.cancel(coros.intro)
+   end
+end
+
 if not context.nkria then
    norns.state.context.nkria = {
       defaults = defaults,
       last_touched_page = defaults.last_touched_page,
       script_mode = "classic",
       kbuf = defaults.kbuf,
+      global_clock_counter = defaults.global_clock_counter,
+      pulse_indicator = defaults.pulse_indicator,
+      post = post,
    }
 end
 
@@ -219,4 +231,5 @@ return {
       return tu.update(env, norns.state.context.nkria.defaults)
    end,
    context = norns.state.context.nkria,
+   ctx = norns.state.context.nkria,
 }
