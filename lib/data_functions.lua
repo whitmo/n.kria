@@ -7,6 +7,7 @@ local globals = include("lib/globals")
 local globs = globals.defaults
 
 local tab = require "tabutil"
+local tu = tab
 
 if Data == nil then
    local pattern_page_attrs = {
@@ -319,27 +320,61 @@ if Data == nil then
    end
 
    function Data:get_overlay()
-      return globs.overlay_names[data:get_global_val('overlay')]
+      return globs.overlay_names[self:get_global_val('overlay')]
    end
 
    -- move globals to data
    function Data:get_page_name(page, alt)
       local r
-      local page = page and page or data:get_global_val('page')
-      local alt = alt and alt or (data:get_global_val('alt_page') == 1)
+      local page = page and page or self:get_global_val('page')
+      local alt = alt and alt or (self:get_global_val('alt_page') == 1)
       r = alt and globs.alt_page_names[page] or globs.page_names[page]
       return r
    end
 
-   function Data.get_display_page_name()
+   function Data:set_active_track(n)
+      -- @@ F&R
+      self:set_global_val('active_track',n)
+      post('track ' .. n)
+   end
+   
+   function Data:at()
+      -- @@ F&R
+      return self:get_global_val('active_track')
+   end
+
+   function Data:ap() -- get active pattern
+      -- @@ F&R
+      return self:get_global_val('active_pattern')
+   end   
+
+
+   
+   function Data:get_display_page_name()
       local p = self:get_page_name()
       if p == "slide" then
-	 local description = data:get_player(at()):describe()
+	 local description = self:get_player(self:at()):describe()
 	 if not description.supports_slew then
 	    p = description.modulate_description
 	 end
       end
       return p
+   end
+
+   function Data:out_of_bounds(track,p,value, real)
+      -- returns true if value is out of bounds on page p, track
+      -- @@ F&R      
+      if real then
+	 return (value < self:get_page_val(track,p,'loop_first'))
+	    or (value > self:get_page_val(track,p,'loop_last'))
+      end
+      
+      return (value < self:get_loop_first(track,p))
+	 or (value > self:get_loop_last(track,p))
+   end
+
+   function Data:get_mod_key()
+      return globs.mod_names[self:get_global_val('mod')]
    end
    
 end
