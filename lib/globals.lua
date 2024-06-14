@@ -58,13 +58,13 @@ local defaults = {
       ,	{0,0,0,0,0,0,0}
    },
    page_defaults = {
-      trig = {min=0,max=1,default=0} 
-      ,	note = {min=1,max=7,default=1} 
-      ,	octave = {min=1,max=7,default=3} 
-      ,	gate = {min=1,max=7,default=1} 
-      ,	retrig = {min=0,max=5,default=1} 
-      ,	transpose = {min=1,max=7,default=1} 
-      ,	slide = {min=1,max=7,default=1} 
+      trig = {min=0,max=1,default=0}
+      ,	note = {min=1,max=7,default=1}
+      ,	octave = {min=1,max=7,default=3}
+      ,	gate = {min=1,max=7,default=1}
+      ,	retrig = {min=0,max=5,default=1}
+      ,	transpose = {min=1,max=7,default=1}
+      ,	slide = {min=1,max=7,default=1}
       ,	velocity = {min=1,max=7,default=5}
    },
    pattern_page_info = {
@@ -93,7 +93,7 @@ local defaults = {
       ,	[16] = 6
    },
    time_desc = {
-      {	
+      {
 	 'all divs independent'
       },
       {
@@ -111,7 +111,7 @@ local defaults = {
       {
 	 'all divs synced'
       },
-      {		
+      {
 	 'most divs globally synced'
 	 ,	'trig & note synced separate'
       }
@@ -127,7 +127,7 @@ local defaults = {
 	 ,	'all loops synced'
       }
    },
-   
+
    -- more global tables
    lexi_names = {'ONE','TWO','THREE','FOUR','FIVE','SIX','SEVEN'},
    page_names = {'trig', 'note', 'octave', 'gate', 'scale', 'pattern'},
