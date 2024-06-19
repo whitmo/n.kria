@@ -85,49 +85,50 @@ function Graphics:note_history()
 			s.move((hist.track*19)-1, 54 - (54/4.0)*ago)
 			s.text(hist.note)
 		end
-	end
+`	end
 	s.aa(0)
 end
 
 function Graphics:scale()
-	s.level(MED)
-	s.rect(0,0,14,53)
-	s.fill()
-	s.level(LOW)
-	s.rect(1,1,13,52)
-	s.stroke()
+   s.level(MED)
+   s.rect(0,0,14,53)
+   s.fill()
+   s.level(LOW)
+   s.rect(1,1,13,52)
+   s.stroke()
 
-	s.level(1)
-	for i=1,7 do
-		s.move(2,7*i+1)
-		s.text(mu.note_num_to_name(meta:make_scale()[(8-i)+data:get_global_val('root_note')]))
-	end
+   s.level(1)
+   for i=1,7 do
+      s.move(2,7*i+1)
+      s.text(mu.note_num_to_name(meta:make_scale()[(8-i)+self.data:get_global_val('root_note')]))
+   end
 end
 
 function Graphics:config_descriptions()
-	
-	local line_1,line_2;
-	if get_script_mode() == 'classic' then
-		line_1 = config_desc[1][data:get_global_val('note_sync') + 1]
-		line_2 = config_desc[2][data:get_global_val('loop_sync')]
-	elseif get_script_mode() == 'extended' then
-		line_1 = 'n.kria is in extended mode'
-		line_2 = 'use time mod page instead'
-	end
+   local script_mode = params:string('script_mode')
+   local line_1,line_2;
+   if script_mode == 'classic' then
+      line_1 = config_desc[1][self.data:get_global_val('note_sync') + 1]
+      line_2 = config_desc[2][self.data:get_global_val('loop_sync')]
+   elseif script_mode == 'extended' then
+      line_1 = 'n.kria is in extended mode'
+      line_2 = 'use time mod page instead'
+   end
 
-	s.move(64,40)
-	s.level(OFF)
-	s.text_center(string.upper(line_1))
-	s.move(64,48)
-	s.text_center(string.upper(line_2))
+   s.move(64,40)
+   s.level(OFF)
+   s.text_center(string.upper(line_1))
+   s.move(64,48)
+   s.text_center(string.upper(line_2))
 
 end
 
 function Graphics:time_descriptions()
-	local rune_1 = data:get_global_val('note_div_sync')
-	local rune_3 = data:get_global_val('div_sync')
+	local rune_1 = self.data:get_global_val('note_div_sync')
+	local rune_3 = self.data:get_global_val('div_sync')
+	local script_mode = params:string('script_mode')
 
-	if get_script_mode() == 'classic' then
+	if script_mode == 'classic' then
 		if 		(rune_1 == 0) and (rune_3 == 1) then desc_num = 1
 			elseif	(rune_1 == 1) and (rune_3 == 1) then desc_num = 2
 			elseif 	(rune_1 == 0) and (rune_3 == 2) then desc_num = 3
