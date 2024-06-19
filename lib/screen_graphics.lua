@@ -3,22 +3,28 @@ WHAT GOES IN THIS FILE:
 - everything related to how the screen looks
 ]]--
 
+local mu = require 'musicutil'
 Graphics = {
 	history = {} -- keys are unique. values are like {track: 1, note: "A", beats: 234}
 }
 
 local data = include('lib/data_functions')
+local meta = include('lib/meta')
+
+function Graphics:init(data)
+   self.data = data
+end
 
 function Graphics:render()
 	s = screen
 	s.clear()
-	
+
 	self:post()
 	self:note_history()
 	self:right_windows()
 	self:scale()
 
-	local overlay = data:get_overlay()
+	local overlay = self.data:get_overlay()
 	if overlay == 'time' then
 		self:description_window()
 		self:time_descriptions()
@@ -33,16 +39,16 @@ end
 function Graphics:track_options()
 
 	for k,v in ipairs(track_options) do
-		local l = data:get_track_val(at(),v) == 1 and HIGH or LOW
+		local l = self.data:get_track_val(at(),v) == 1 and HIGH or LOW
 		local x = (track_options_xes[k]==1) and 86 or 78
-		local y = ((k-1)*7)+2 
-		
+		local y = ((k-1)*7)+2
+
 		s.level(l)
 		s.move(s.text_extents(string.upper(v))+5,y+3)
 		s.line_width(2)
 		s.line(x,y+3)
 		s.stroke()
-		
+
 		s.line_width(1)
 		s.rect(x,y,6,6)
 		s.fill()
