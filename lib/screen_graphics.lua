@@ -144,7 +144,7 @@ function Graphics:time_descriptions()
 			s.move(64,48)
 			s.text_center(string.upper(desc[2]))
 		end
-	elseif get_script_mode() == 'extended' then
+	elseif script_mode == 'extended' then
 		s.level(OFF)
 		s.move(64,40)
 		s.text_center('N.KRIA IS IN EXTENDED MODE')
@@ -163,30 +163,31 @@ function Graphics:right_windows()
 	,	'STRETCH'
 	,	'PUSH'
 	}
+	local script_mode = params:string('script_mode')
 
 	for k,v in ipairs(names) do
-		if get_script_mode() == 'classic' and k>2 then break end
+		if script_mode == 'classic' and k>2 then break end
 		s.level(blink.menu[k] and MED or LOW)
 		s.rect(left_border,(height*k)+1,128-left_border,-height)
 		s.fill()
 
 		s.level(blink.menu[k] and OFF or MED)
 		s.move(125,(height*k)-2)
-		if v == 'BPM' then 
+		if v == 'BPM' then
 			str = blink.menu[k] and util.round(params:get('clock_tempo')) or 'BPM'
 		elseif v == 'SWING' then
-			str = blink.menu[k] and data:get_global_val('swing')..'%' or 'SWING'
+			str = blink.menu[k] and self.data:get_global_val('swing')..'%' or 'SWING'
 		elseif v == 'STRETCH' then
-			str = blink.menu[k] and data:get_global_val('stretch') or 'STRETCH'
+			str = blink.menu[k] and self.data:get_global_val('stretch') or 'STRETCH'
 		elseif v == 'PUSH' then
-			str = blink.menu[k] and data:get_global_val('push') or 'PUSH'
+			str = blink.menu[k] and self.data:get_global_val('push') or 'PUSH'
 		end
 		s.text_right(str)
 	end
 
 	s.level(MED)
 	local h =height*#names
-	if get_script_mode() == 'classic' then h = h / 2 end
+	if script_mode == 'classic' then h = h / 2 end
 	s.rect(left_border,1,128-left_border,h)
 	s.stroke()
 end
