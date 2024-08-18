@@ -1,6 +1,6 @@
 --[[
 WHAT GOES IN THIS FILE:
-- global variables
+- default variables
 
 ]]--
 local tu = require 'tabutil'
@@ -149,10 +149,6 @@ local defaults = {
       ,	divisor = true
    },
 
-   blink = {
-      menu = {false,false,false,false,false}
-   },
-
    track_options = {
       'stretchable'
       ,	'pushable'
@@ -163,73 +159,8 @@ local defaults = {
       ,	'loop_sync'
    },
    track_options_xes = {0,0,1,1,0,1,0},
-
+   -- @@ move
    coros = {},
-   value_buffer = {},
-   page_clipboards = {},
-   track_clipboard = {},
-   pattern_clipboard = {},
-   ms_step_clipboard = {},
-   last_notes = {0,0,0,0},
-   last_notes_raw = {0,0,0,0},
-   temp_scale = {-1,-1,-1,-1,-1,-1},
-
-   post_buffer = '-',
-   loop_first = -1,
-   loop_last = -1,
-   wavery_light = MED,
-   waver_dir = 1,
-   waver_flipflop = true,
-   last_touched_page = 'trig',
-   last_touched_track = 1,
-   last_touched_ms_step = 1,
-   last_touched_pattern = 1,
-   pulse_indicator = 1,
-   global_clock_counter = 1,
-   just_pressed_clipboard_key = false,
-   just_saved_pattern = false,
-   just_pressed_track = false,
-
-   -- buffers
-   kbuf = {}, -- key state buffer, true/false
-   onboard_key_states = {false,false,false},
 }
 
--- global globals
-GLOBALS = defaults
-
-if not norns.state.context then
-   norns.state.context = {}
-end
-
-context = norns.state.context
-
-local function post(str,intro)
-   -- second arg: send true if we shouldn't interrupt the intro sequence.
-   -- basically don't worry about it
-   context.nkria.post_buffer = str
-   if (not intro) and (coros.intro) then
-      clock.cancel(coros.intro)
-   end
-end
-
-if not context.nkria then
-   norns.state.context.nkria = {
-      defaults = defaults,
-      last_touched_page = defaults.last_touched_page,
-      script_mode = "classic",
-      kbuf = defaults.kbuf,
-      global_clock_counter = defaults.global_clock_counter,
-      pulse_indicator = defaults.pulse_indicator,
-      post = post,
-   }
-end
-
-return {
-   defaults = norns.state.context.nkria.defaults,
-   merge = function(env)
-      return tu.update(env, norns.state.context.nkria.defaults)
-   end,
-   context = norns.state.context.nkria,
-   ctx = norns.state.context.nkria,
-}
+return defaults
