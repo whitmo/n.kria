@@ -7,22 +7,27 @@ WHAT GOES IN THIS FILE:
 local nb = include('lib/nb/lib/nb')
 
 local rw = include('lib/pset_rewriter')
-local globals = include("lib/globals")
-local defaults = globals.defaults
+local defaults = include("lib/defaults")
+
 local tu = require 'tabutil'
-local ctx = globals.context
 
 local Prms = {}
 
-function Prms:add(data)
-   data:init()
-   self.data = data
-   params:add_separator('N.KRIA')
+function Prms:init(ctx)
+   self.data = ctx.data
+   self.ctx = ctx
+   params:add_separator('NORKRIA')
    self:add_globals()
    self:script_mode_switch()
    self:add_tracks()
    params:add_separator("VOICE CONTROLS")
    nb:add_player_params()
+   return self
+end
+
+function Prms:from_ctx(ctx)
+   self:init(ctx)
+   return self
 end
 
 function Prms:script_mode_switch()
@@ -48,6 +53,7 @@ function Prms:script_mode_switch()
    params:set_action(
       'script_mode',
       function(x)
+	 self.ctx.script_mode = x
 	 -- create global symbol for mode state
 	 for _, v in pairs(extended_param_names.globals) do
 	    if x == 2 then
@@ -85,7 +91,7 @@ end
 params.action_read = function(filename, name, pset_number)
    local patternfile = filename .. ".kriapattern"
    if util.file_exists(patternfile) then
-      ctx.data.patterns = tab.load(patternfile)
+      self.ctx.data.patterns = tab.load(patternfile)
    elseif params.last_chance then
       params.last_chance = nil
    else
@@ -100,14 +106,13 @@ params.action_read = function(filename, name, pset_number)
 end
 
 params.action_write = function(filename, name, pset_number)
-   tab.save(ctx.data.patterns, filename .. ".kriapattern")
+   tab.save(self.ctx.data.patterns, filename .. ".norkriapattern")
 end
 
 function Prms:add_globals()
    local data = self.data
-   local new_env = tu.update(_ENV, globals.defaults)
+   local new_env = tu.update(_ENV, defaults)
    local _ENV = new_env
-
 
    data:add_binary('playing', 'PLAYING?', 'toggle')
    data:add_number('root_note', 'ROOT NOTE', 0, 11, 0,

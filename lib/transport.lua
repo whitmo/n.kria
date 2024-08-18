@@ -1,41 +1,46 @@
--- matrix
-local status, matrix = pcall(require, 'matrix/lib/matrix')
-if not status then matrix = nil end
-
-local globals = include('lib/globals')
-local defs = globals.defaults
 local tu = require 'tabutil'
 
 local Transport = {}
 
-function Transport:init(data, ctx)
+function Transport:init(ctx, data, defaults) -- @@ explode or create special .init_via_ctx function
    self.data = data
    self.ctx = ctx
-   self.post = ctx.post
+   self.defaults = defaults
+   self.NUM_TRACKS = self.defaults.NUM_TRACKS
+   return self
+end
+
+function Transport:from_ctx(ctx)
+   self:init(ctx, ctx.data, ctx.defaults)
+   return self
 end
 
 function Transport:play_pause()
    self.data:delta_global_val('playing', 1)
-   self.post((self.data:get_global_val('playing') == 1) and 'play' or 'pause')
+   self.ctx:post(
+      (self.data:get_global_val('playing') == 1)
+      and
+      'play' or 'pause'
+   )
 end
 
 function Transport:reset_all()
-   for t=1,defs.NUM_TRACKS do
+   for t=1, self.self.NUM_TRACKS do
       self:reset_track(t)
    end
    self.ctx.pulse_indicator = 1
    self.data:set_global_val('pattern_quant_pos',1)
    self.data:set_global_val('ms_duration_pos',1)
-   self.ctx.swing_this_step = false
-   self.post('reset all')
+   self.defaults.swing_this_step = false
+   self.ctx:post('reset all')
 end
 
 function Transport:reset_track(t)
-   for k,v in ipairs(combined_page_list) do
+   for k,v in ipairs(self.defaults.combined_page_list) do
       if v == 'scale' or v == 'patterns' then break end
       self:reset_page(t,v)
    end
-   self.post('reset track '..t)
+   self.ctx:post('reset track '..t)
 end
 
 function Transport:reset_page(t,p)
@@ -46,15 +51,17 @@ function Transport:reset_page(t,p)
 end
 
 function Transport:advance_all()
-   self.ctx.global_clock_counter = ctx.global_clock_counter + 1
-   if global_clock_counter > self.data:get_global_val('clock_div') then
+   local ctx = self.ctx
+   ctx.global_clock_counter = ctx.global_clock_counter + 1
+
+   if ctx.global_clock_counter > self.data:get_global_val('clock_div') then
       ctx.global_clock_counter = 1
-      ctx.pulse_indicator = pulse_indicator + 1
+      ctx.pulse_indicator = ctx.pulse_indicator + 1
       if ctx.pulse_indicator > 16 then ctx.pulse_indicator = 1 end
 
       self:advance_pattern_page()
 
-      for t=1, defs.NUM_TRACKS do
+      for t=1, self.self.NUM_TRACKS do
 	 if self.data:get_track_val(t,'param_clock') == 0 then
 	    self:advance_track(t)
 	 end
@@ -71,7 +78,7 @@ function Transport:advance_pattern_page()
    if self.data:get_global_val('cued_pattern') ~= 0 then
       self.data:set_global_val('active_pattern',self.data:get_global_val('cued_pattern'))
       self.data:set_global_val('cued_pattern',0)
-      self.post('pattern '..ap()..' active')
+      self.ctx:post('pattern '..ap()..' active')
    end
 
    if self.data:get_global_val('ms_active') == 0 then return end
@@ -112,26 +119,26 @@ function Transport:advance_page(t,p,real,playing) -- track,page
    local old_pos = real and self.data:get_page_val(t,p,'pos') or self.data:get_pos(t, p)
    local first = real and self.data:get_page_val(t,p,'loop_first') or self.data:get_loop_first(t, p)
    local last = real and self.data:get_page_val(t,p,'loop_last') or self.data:get_loop_last(t, p)
-   local mode = play_modes[self.data:get_track_val(t,'play_mode')]
+   local mode = self.defaults.play_modes[self.data:get_track_val(t,'play_mode')]
    local new_pos;
    local resetting = false
 
    if mode == 'forward' then
       new_pos = old_pos + 1
-      if out_of_bounds(t,p,new_pos, real) then
+      if self.data:out_of_bounds(t,p,new_pos, real) then
 	 new_pos = first
 	 resetting = true
       end
    elseif mode == 'reverse' then
       new_pos = old_pos - 1
-      if out_of_bounds(t,p,new_pos, real) then
+      if self.data:out_of_bounds(t,p,new_pos, real) then
 	 new_pos = last
 	 resetting = true
       end
    elseif mode == 'triangle' then
       local delta = self.data:get_page_val(t,p,'pipo_dir') == 1 and 1 or -1
       new_pos = old_pos + delta
-      if out_of_bounds(t,p,new_pos, real) then
+      if self.data:out_of_bounds(t,p,new_pos, real) then
 	 if new_pos > last then
 	    new_pos = util.clamp(last-1,first,last)
 	    self.data:set_page_val(t,p,'pipo_dir',0)

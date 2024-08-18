@@ -60,7 +60,7 @@ function Rewriter.rewrite(filename)
             end
         end
     end
-    tab.save(result, filename .. ".kriapattern")
+    tab.save(result, filename .. ".norkriapattern")
 end
 
 

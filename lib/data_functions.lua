@@ -1,13 +1,14 @@
 --[[
 WHAT GOES IN THIS FILE:
-- wrappers for interacting w params sporting long annoying names
+   - wrappers for interacting w params sporting long annoying names
+   - @@ combine with prms.lua?
 ]]
 --
-local globals = include("lib/globals")
-local globs = globals.defaults
-
+local defaults = include("lib/defaults")
+local defs = defaults
 local tab = require "tabutil"
 local tu = tab
+local Data = nil
 
 if Data == nil then
    local pattern_page_attrs = {
@@ -18,8 +19,9 @@ if Data == nil then
 
    Data = {}
 
+   -- @@ Magic, necessary?
    local global_meta = {
-      __index = function(t, key)
+      __index = function(_, key)
 	 if params[key] then
 	    return function(self, id, ...)
 	       -- do the params part
@@ -35,7 +37,7 @@ if Data == nil then
    }
 
    local scale_meta = {
-      __index = function(t, key)
+      __index = function(_, key)
 	 if params[key] then
 	    return function(self, degree, ...)
 	       -- do the params part
@@ -51,7 +53,7 @@ if Data == nil then
    }
 
    local track_meta = {
-      __index = function(t, key)
+      __index = function(_, key)
 	 if params[key] then
 	    return function(self, id, ...)
 	       -- do the params part
@@ -59,6 +61,7 @@ if Data == nil then
 	       local f = params[key]
 	       f(params, new_id, ...)
 	       local p = params:lookup_param(new_id)
+	       -- print(new_id)
 	       self[id] = p
 	    end
 	 end
@@ -67,7 +70,7 @@ if Data == nil then
    }
 
    local page_meta = {
-      __index = function(t, key)
+      __index = function(_, key)
 	 if params[key] == nil then return nil end
 	 return function(self, id, ...)
 	    -- do the params part
@@ -84,28 +87,37 @@ if Data == nil then
 
    Data.pattern = nil
 
-   function Data:init()
+   function Data:init(ctx)
       -- Two layers — one for data that's stored per-pattern, and one
       -- that's just tracks, for non-pattern data.
       self.patterns = {}
       self.tracks = {}
+      self.post = ctx.post
+      self.ctx = ctx
 
-      for t = 1, globs.NUM_TRACKS do
+      for t = 1, defs.NUM_TRACKS do
 	 local trk = { idx = t }
 	 setmetatable(trk, track_meta)
-	 for _, v in ipairs(globs.pages_with_steps) do
+	 for _, v in ipairs(defs.pages_with_steps) do
 	    local page = { track = t, id = v }
 	    setmetatable(page, page_meta)
 	    trk[v] = page
 	 end
 	 self.tracks[t] = trk
       end
+
       self.scales = {}
       for slot = 1, 16 do
 	 local scale = { slot = slot }
 	 setmetatable(scale, scale_meta)
 	 self.scales[slot] = scale
       end
+      return self
+   end
+
+   function Data:from_ctx(ctx)
+      self:init(ctx)
+      return self
    end
 
    -- GET
@@ -119,7 +131,7 @@ if Data == nil then
 
    function Data:get_page_val(track, page, name)
       if pattern_page_attrs[name] then
-	 local default = pattern_page_info[name].default
+	 local default = self.ctx.defaults.pattern_page_info[name].default
 	 local pt = self.patterns[self.pattern]
 	 if pt == nil then return default end
 	 local tr = pt[track]
@@ -137,7 +149,6 @@ if Data == nil then
 	 local param = pp[name]
 	 if type(param) ~= 'table' then
 	    print("page is", page, param)
-	    tab.print(pp)
 	 end
 	 return param:get()
       end
@@ -178,7 +189,7 @@ if Data == nil then
       local default
       if thing == nil or thing == 'step' then
 	 thing = 'step'
-	 default = page_defaults[page].default
+	 default = defaults.page_defaults[page].default
       elseif thing == 'prob' then
 	 default = 4
       elseif thing == 'subtrig' then
@@ -217,7 +228,7 @@ if Data == nil then
 
    function Data:set_page_val(track, page, name, new_val)
       if pattern_page_attrs[name] then
-	 local info = pattern_page_info[name]
+	 local info = self.ctx.defaults.pattern_page_info[name]
 	 local vv = util.clamp(new_val, info.min, info.max)
 	 self:ensure(track, page, 1)
 	 self.patterns[self.pattern][track][page][name] = vv
@@ -231,11 +242,11 @@ if Data == nil then
    end
 
    function Data:ensure(track, page, step)
-      if self.patterns[self.pattern] == nil then 
-	 self.patterns[self.pattern] = {} 
+      if self.patterns[self.pattern] == nil then
+	 self.patterns[self.pattern] = {}
       end
-      if self.patterns[self.pattern][track] == nil then 
-	 self.patterns[self.pattern][track] = {} 
+      if self.patterns[self.pattern][track] == nil then
+	 self.patterns[self.pattern][track] = {}
       end
       if self.patterns[self.pattern][track][page] == nil then
 	 self.patterns[self.pattern][track][page] = {}
@@ -248,7 +259,7 @@ if Data == nil then
    function Data:set_step_val(track, page, step, new_val, thing)
       local vv = new_val
       if thing == nil then
-	 local defaults = page_defaults[page]
+	 local defaults = self.ctx.defaults.page_defaults[page]
 	 thing = 'step'
 	 if page == 'trig' then
 	    vv = util.wrap(new_val, defaults.min, defaults.max)
@@ -278,7 +289,7 @@ if Data == nil then
 
    function Data:delta_page_val(track, page, name, d)
       if pattern_page_attrs[name] then
-	 local info = pattern_page_info[name]
+	 local info = self.ctx.defaults.pattern_page_info[name]
 	 local default = info.default
 	 local val = self.patterns[self.pattern][track][page][name] or default
 	 val = util.clamp(val + d, info.min, info.max)
@@ -290,7 +301,7 @@ if Data == nil then
 
    function Data:delta_step_val(track, page, step, d, thing)
       if thing == nil then thing = 'step' end
-      local info = page_defaults[page]
+      local info = self.ctx.defaults.page_defaults[page]
       local val = self:get_step_val(track, page, step, thing)
       val = val + d
       if page == 'trig' and thing == 'step' then
@@ -313,31 +324,31 @@ if Data == nil then
    end
 
    function Data:set_overlay(name)
-   	local num = tab.key(overlay_names, name)
-	num = util.clamp(num, 1, get_script_mode()=='extended' and 4 or 3)
-	data:set_global_val('overlay', num)
-	post('overlay: ' .. self:get_overlay())
+      local num = tab.key(self.ctx.defaults.overlay_names, name)
+      num = util.clamp(num, 1, self.ctx.script_mode == 'extended' and 4 or 3)
+      data:set_global_val('overlay', num)
+      self:post('overlay: ' .. self:get_overlay())
    end
 
    function Data:get_overlay()
-      return globs.overlay_names[self:get_global_val('overlay')]
+      return defs.overlay_names[self:get_global_val('overlay')]
    end
 
    -- move globals to data
    function Data:get_page_name(page, alt)
       local r
-      local page = page and page or self:get_global_val('page')
-      local alt = alt and alt or (self:get_global_val('alt_page') == 1)
-      r = alt and globs.alt_page_names[page] or globs.page_names[page]
+      page = page and page or self:get_global_val('page')
+      alt = alt and alt or (self:get_global_val('alt_page') == 1)
+      r = alt and defs.alt_page_names[page] or defs.page_names[page]
       return r
    end
 
    function Data:set_active_track(n)
       -- @@ F&R
       self:set_global_val('active_track',n)
-      post('track ' .. n)
+      self:post('track ' .. n)
    end
-   
+
    function Data:at()
       -- @@ F&R
       return self:get_global_val('active_track')
@@ -346,10 +357,8 @@ if Data == nil then
    function Data:ap() -- get active pattern
       -- @@ F&R
       return self:get_global_val('active_pattern')
-   end   
+   end
 
-
-   
    function Data:get_display_page_name()
       local p = self:get_page_name()
       if p == "slide" then
@@ -363,20 +372,20 @@ if Data == nil then
 
    function Data:out_of_bounds(track,p,value, real)
       -- returns true if value is out of bounds on page p, track
-      -- @@ F&R      
+      -- @@ F&R
       if real then
 	 return (value < self:get_page_val(track,p,'loop_first'))
 	    or (value > self:get_page_val(track,p,'loop_last'))
       end
-      
+
       return (value < self:get_loop_first(track,p))
 	 or (value > self:get_loop_last(track,p))
    end
 
    function Data:get_mod_key()
-      return globs.mod_names[self:get_global_val('mod')]
+      return defs.mod_names[self:get_global_val('mod')]
    end
-   
-end
+
+end -- if Data == nil then
 
 return Data
