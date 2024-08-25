@@ -148,50 +148,6 @@ function Meta:edit_divisor(track,p,new_val)
    self.ctx:post('group '..group_to_edit..' divisor: '..new_val)
 end
 
-function Meta:edit_loop_classic(track, first, last)
-   local f = math.min(first,last)
-   local l = math.max(first,last)
-   local p = self.data:get_page_name()
-   local div_sync_modes = self.defaults.div_sync_modes
-   local combined_page_list = self.defaults.combined_page_list
-
-   local loopsync = div_sync_modes[self.data:get_global_val('loop_sync')]
-
-   if p == 'pattern' and params:get('ms_active') == 1 then
-      params:set('ms_first',f)
-      params:set('ms_last',l)
-      self.ctx:post('meta-sequence loop: ['..f..'-'..l..']')
-   elseif loopsync == 'none' then
-      if (p == 'trig' or p == 'note') and self.data:get_global_val('note_sync') == 1 then
-	 self.data:set_page_val(track,'note','loop_first',f)
-	 self.data:set_page_val(track,'note','loop_last',l)
-	 self.data:set_page_val(track,'trig','loop_first',f)
-	 self.data:set_page_val(track,'trig','loop_last',l)
-	 self.ctx:post('t'..track..' trig & note loops: ['..f..'-'..l..']')
-      else
-	 self.data:set_page_val(track,p,'loop_first',f)
-	 self.data:set_page_val(track,p,'loop_last',l)
-	 self.ctx:post('t'..track..' '.. self.data:get_display_page_name()..' loop: ['..f..'-'..l..']')
-      end
-   elseif loopsync == 'track' then
-      for k,v in ipairs(combined_page_list) do
-	 if v == 'scale' or v == 'patterns' then break end
-	 self.data:set_page_val(track,v,'loop_first',f)
-	 self.data:set_page_val(track,v,'loop_last',l)
-      end
-      self.ctx:post('t'..track..' loops: ['..f..'-'..l..']')
-   elseif loopsync == 'all' then
-      for t=1, self.defaults.NUM_TRACKS do
-	 for k,v in ipairs(combined_page_list) do
-	    if v == 'scale' or v == 'pattern' then break end
-	    self.data:set_page_val(t,v,'loop_first',f)
-	    self.data:set_page_val(t,v,'loop_last',l)
-	 end
-      end
-      self.ctx:post('all loops: ['..f..'-'..l..']')
-   end
-end
-
 function Meta:clear_temp_loops()
    if self.temp_looping_pages then
       for _, pg in ipairs(self.temp_looping_pages) do

@@ -82,18 +82,12 @@ function Graphics:render()
    -- \/\/ these are in order of precedence \/\/
    local p = data:get_page_name()
    local overlay = data:get_overlay()
-   -- @@ value is set wrong
-   local mode = ctx.script_mode
 
    if overlay == 'time' then self:config_1()
    elseif overlay == 'options' then self:config_2()
    elseif overlay == 'patchers' then self:patchers()
    elseif p == 'scale' then
-      if mode == 'classic' then
-	 self:classic_scale()
-      elseif mode == 'extended' then
 	 self:extended_scale()
-      end
    elseif p == 'track options' then
       self:track_options()
    elseif p == 'pattern' then
@@ -289,9 +283,6 @@ function Graphics:time(D)
 
    g:led(data:get_page_val(active_track,data:get_page_name(),'counter'),1,MED)
 
-   local script_mode = self.ctx.script_mode
-
-   if script_mode == 'classic' or D then return end
    for i=1, ctx.defaults.NUM_SYNC_GROUPS do
       local x1 = ((i-1)%4)+1
       local y1 = util.round_up(i/4)+4
@@ -343,62 +334,6 @@ function Graphics:prob()
       g:led(x,7-d,HIGH)
       g:led(x,1,data:get_pos(active_track,data:get_page_name()) == x and MED or LOW)
    end
-end
-
-function Graphics:classic_scale()
-   local data, ctx, g = self.data, self.ctx, self.grid
-   for i=1,16 do -- scale select
-      local y = (i > 8) and 7 or 6
-      local l = (data:get_global_val('scale_num') == i) and HIGH or MED
-      g:led(((i-1) % 8)+1, y, l)
-   end
-
-   for t=1,4 do -- param clock buttons
-      local l = (data:get_track_val(t,'param_clock') == 1) and HIGH or MED
-      g:led(1,t,l)
-   end
-
-   for t=1,4 do -- trigger clock buttons
-      local l = (data:get_track_val(t,'trigger_clock') == 1) and HIGH or MED
-      g:led(2,t,l)
-   end
-
-   for t=1,4 do -- play modes
-      g:led(3,t,LOW)
-      g:led(9,t,LOW)
-      for x=1,5 do
-	 local l = data:get_track_val(t,'play_mode') == x and HIGH or MED
-	 g:led(x+3,t,l)
-      end
-   end
-
-   for i=2,7 do -- scale editor
-      g:led(9,8-i,LOW)
-      local d = data:get_scale_degree(data:get_global_val('scale_num'), i)
-
-      g:led(9+d,8-i,HIGH)
-      if ctx.temp_scale[i-1] ~= -1 then g:led(ctx.temp_scale[i-1]+9,8-i,MED) end
-   end
-   g:led(9,7,LOW)
-   g:led(9+util.clamp(data:get_global_val('root_note'),0,7),7,HIGH)
-end
-
-function Graphics:extended_scale()
-   local data, ctx, g = self.data, self.ctx, self.grid
-   for i=1,16 do -- scale select
-      local x = (i > 8) and 2 or 1
-      local l = (data:get_global_val('scale_num') == i) and HIGH or MED
-      g:led(x, ((i-1) % 8)+1, l)
-   end
-   local temp_scale = ctx.temp_scale
-   for i=2,7 do -- scale editor
-      g:led(4,8-i,LOW)
-      local d = data:get_scale_degree(data:get_global_val('scale_num'), i)
-      g:led(4+d,8-i,HIGH)
-      if temp_scale[i-1] ~= -1 then g:led(temp_scale[i-1]+4,8-i,MED) end
-   end
-   g:led(4,7,LOW)
-   g:led(4+util.clamp(data:get_global_val('root_note'),0,7),7,HIGH)
 end
 
 function Graphics:track_options()
@@ -741,8 +676,6 @@ function Graphics:velocity(D)
 
    g:led(data:get_page_val(active_track,data:get_page_name(),'counter'),1,MED)
 
-   local script_mode = ctx.script_mode
-   if script_mode == 'classic' or D then return end
    for i=1, ctx.defaults.NUM_SYNC_GROUPS do
       local x1 = ((i-1)%4)+1
       local y1 = util.round_up(i/4)+4
@@ -794,43 +727,6 @@ function Graphics:prob()
       g:led(x,7-d,HIGH)
       g:led(x,1,data:get_pos(active_track,data:get_page_name()) == x and MED or LOW)
    end
-end
-
-function Graphics:classic_scale()
-   local ctx, data, g = self.ctx, self.data, self.g
-   for i=1,16 do -- scale select
-      local y = (i > 8) and 7 or 6
-      local l = (data:get_global_val('scale_num') == i) and HIGH or MED
-      g:led(((i-1) % 8)+1, y, l)
-   end
-
-   for t=1,4 do -- param clock buttons
-      local l = (data:get_track_val(t,'param_clock') == 1) and HIGH or MED
-      g:led(1,t,l)
-   end
-
-   for t=1,4 do -- trigger clock buttons
-      local l = (data:get_track_val(t,'trigger_clock') == 1) and HIGH or MED
-      g:led(2,t,l)
-   end
-
-   for t=1,4 do -- play modes
-      g:led(3,t,LOW)
-      g:led(9,t,LOW)
-      for x=1,5 do
-	 local l = data:get_track_val(t,'play_mode') == x and HIGH or MED
-	 g:led(x+3,t,l)
-      end
-   end
-
-   for i=2,7 do -- scale editor
-      g:led(9,8-i,LOW)
-      local d = data:get_scale_degree(data:get_global_val('scale_num'), i)
-      g:led(9+d,8-i,HIGH)
-      if ctx.temp_scale[i-1] ~= -1 then g:led(ctx.temp_scale[i-1]+9,8-i,MED) end
-   end
-   g:led(9,7,LOW)
-   g:led(9+util.clamp(data:get_global_val('root_note'),0,7),7,HIGH)
 end
 
 function Graphics:extended_scale()

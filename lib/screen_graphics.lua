@@ -122,15 +122,8 @@ function Graphics:scale()
 end
 
 function Graphics:config_descriptions()
-   local script_mode = self.ctx.script_mode
-   local line_1,line_2;
-   if script_mode == 'classic' then
-      line_1 = config_desc[1][self.data:get_global_val('note_sync') + 1]
-      line_2 = config_desc[2][self.data:get_global_val('loop_sync')]
-   elseif script_mode == 'extended' then
-      line_1 = 'n.kria is in extended mode'
-      line_2 = 'use time mod page instead'
-   end
+   local line_1 = 'n.kria is in extended mode'
+   local line_2 = 'use time mod page instead'
 
    s.move(64,40)
    s.level(OFF)

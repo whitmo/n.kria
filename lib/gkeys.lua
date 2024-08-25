@@ -87,7 +87,9 @@ end
 function gkeys:page_select(x,_,z,_)
    if z==1 then
       return
-   elseif z==0 then
+   end
+
+   if z==0 then
       if self.ctx.onboard:page_key_held() ~= 0 then
 	 return
       elseif self.ctx.just_pressed_clipboard_key then
@@ -98,9 +100,7 @@ function gkeys:page_select(x,_,z,_)
    local data = self.ctx.data
    local page_map = self.defaults.page_map
    if page_map[x] == data:get_global_val('page') then -- if double-pressing...
-      if tab.contains({6,7,8,9},x)
-      -- or (get_script_mode() == 'extended' and x == 15)
-      then
+      if tab.contains({6,7,8,9},x) then
 	 data:delta_global_val('alt_page',1)
       end
    else
@@ -153,19 +153,11 @@ function gkeys:resolve_loop_keys(x,y,z,t)
 	 else
 	    self.ctx.loop_last = x
 	 end
-	 if self.ctx.script_mode == 'classic' then
-	    self.meta:edit_loop_classic(t,self.ctx.loop_first, self.ctx.loop_last)
-	 elseif self.ctx.script_mode == 'extended' then
-	    self.meta:edit_loop_extended(t,self.ctx.loop_first, self.ctx.loop_last, kbuf[12][8])
-	 end
+	 self.meta:edit_loop_extended(t,self.ctx.loop_first, self.ctx.loop_last, kbuf[12][8])
       end
    else -- release
       if self.ctx.loop_last == -1 then
-	 if self.ctx.script_mode == 'classic' then
-	    self.meta:edit_loop_classic(t,self.ctx.loop_first, self.ctx.loop_last)
-	 elseif self.ctx.script_mode == 'extended' then
-	    self.meta:edit_loop_extended(t,self.ctx.loop_first, self.ctx.loop_last, kbuf[12][8])
-	 end
+	 self.meta:edit_loop_extended(t,self.ctx.loop_first, self.ctx.loop_last, kbuf[12][8])
       else
 	 for i=1,16 do
 	    for j=1,7 do
@@ -188,63 +180,6 @@ function gkeys:resolve_loop_keys(x,y,z,t)
    end
 end
 
-function gkeys:time_mod_classic(x,_,z,_)
-   local data = self.data
-   if z == 0 then return end
-   local g1 = data:get_global_val('note_div_sync') > 0 and 'on' or 'off'
-   local g2 = self.defaults.div_sync_modes[data:get_global_val('div_sync')]
-   local pn = data:get_page_name(false)
-
-   local active_track = data:at()
-   if g1 == 'off' and g2 == 'none' then
-      self.meta:edit_divisor(active_track,pn,x)
-   elseif g1 == 'on' and g2 == 'none' then
-      if pn == 'trig' or pn == 'note' then
-	 self.meta:edit_divisor(active_track,'trig',x)
-	 self.meta:edit_divisor(active_track,'note',x)
-      else
-	 self.meta:edit_divisor(active_track,pn,x)
-      end
-   elseif g1 == 'off' and g2 == 'track' then
-      for _,v in ipairs(self.ctx.defaults.combined_page_list) do
-	 if v ~= 'scale' and v ~= 'pattern' then
-	    self.meta:edit_divisor(active_track,v,x)
-	 end
-      end
-   elseif g1 == 'on' and g2 == 'track' then
-      if pn == 'trig' or pn == 'note' then
-	 self.meta:edit_divisor(active_track,'trig',x)
-	 self.meta:edit_divisor(active_track,'note',x)
-      else
-	 for _,v in ipairs(self.defaults.combined_page_list) do
-	    if v ~= 'trig' and v ~= 'note' and v ~= 'scale' and v ~= 'pattern' then
-	       self.meta:edit_divisor(active_track,v,x)
-	    end
-	 end
-      end
-   elseif g1 == 'off' and g2 == 'all' then
-      for t=1, self.defaults.NUM_TRACKS do
-	 for _,v in ipairs(self.defaults.combined_page_list) do
-	    if v ~= 'scale' and v ~= 'pattern' then
-	       self.meta:edit_divisor(t,v,x)
-	    end
-	 end
-      end
-   elseif g1 == 'on' and g2 == 'all' then -- on/all
-      for t=1, self.defaults.NUM_TRACKS do
-	 if pn == 'trig' or pn == 'note' then
-	    self.meta:edit_divisor(t,'trig',x)
-	    self.meta:edit_divisor(t,'note',x)
-	 else
-	    for _,v in ipairs(self.defaults.combined_page_list) do
-	       if v ~= 'trig' and v ~= 'note' and v ~= 'scale' and v ~= 'pattern' then
-		  self.meta:edit_divisor(t,v,x)
-	       end
-	    end
-	 end
-      end
-   end
-end
 
 function gkeys:time_mod_extended(x,y,z,t)
    if z == 0 then return end
@@ -297,49 +232,6 @@ function gkeys:prob_mod(x,y,z,_)
    if z == 1 and y > 2 and y < 7 then
       data:set_step_val(data:at(), data:get_page_name(), x, 7-y, 'prob')
       self:post('odds: '.. self.defaults.prob_map[7-y] .. '%')
-   end
-end
-
-function gkeys:classic_scale(x,y,z,_)
-   local kbuf = self.kbuf
-   local data = self.data
-   if x < 9 and y > 5 and y < 8 and z == 1 then -- scale select
-      local n = x + (y-6) * 8
-      data:set_global_val('scale_num',n)
-      self:post('selected scale '..n)
-
-   elseif x == 1 and y < 5 and z == 1 then
-      data:delta_track_val(y,'param_clock',1)
-      self:post('t'..y..' param clocking '..(data:get_track_val(y,'param_clock') == 1 and 'on' or 'off'))
-
-   elseif x == 2 and y < 5 and z == 1 then -- trigger clock toggles
-      data:delta_track_val(y,'trigger_clock',1)
-      self:post('t'..y..' trigger clocking '..(data:get_track_val(y,'trigger_clock') == 1 and 'on' or 'off'))
-
-   elseif x > 3 and x < 9 and y < 5 and z == 1 then -- play modes
-      data:set_global_val('play_mode_t'..y, x-3)
-      self:post('t'..y..' playmode: '..self.defaults.play_modes[x-3])
-
-   elseif x > 8 and z == 1 then -- scale editor
-      if y == 7 then
-	 data:set_global_val('root_note',x-9)
-	 self:post('root note: '..mu.note_num_to_name(data:get_global_val('root_note')))
-	 self.meta:make_scale()
-	 return
-      end
-      local scale_degree = data:get_scale_degree(data:get_global_val('scale_num'), 8-y)
-      if  	(kbuf[scale_degree+9][y])
-	 and (self.ctx.temp_scale[7-y] ~= x-9)
-	 and (scale_degree ~= x-9)
-      then
-	 self.ctx.temp_scale[7-y] = x-9
-	 self:post('live-adjust '..7-y..': '..self.ctx.temp_scale[7-y])
-      else
-	 data:set_scale_degree(data:get_global_val('scale_num'), 8-y, x-9)
-	 self.ctx.temp_scale[7-y] = -1
-	 self:post('scale stride, degree '..8-y..': '..x-9)
-      end
-      self.meta:make_scale()
    end
 end
 
@@ -551,7 +443,6 @@ function gkeys:key(x,y,z)
    -- print('grid:',x,y,z)
    local kbuf = self.kbuf
    local data = self.ctx.data
-   local script_mode = self.ctx.script_mode
 
    kbuf[x][y] = (z == 1)
    local t
@@ -574,7 +465,7 @@ function gkeys:key(x,y,z)
       self:patchers(x,y,z,t)
    elseif overlay == 'none' then -- no overlay
       if y == 8 then
-	 if tab.contains({5,10,14},x) and script_mode == 'extended' then
+	 if tab.contains({5,10,14},x) then
 	    if kbuf[5][8] and kbuf[10][8] and kbuf[14][8] then
 	       data:set_global_val('overlay',4)
 	       self:post('patcher: '..self.defaults.patchers[data:get_global_val('patcher')])
@@ -589,14 +480,7 @@ function gkeys:key(x,y,z)
       elseif y <= 7 then -- main field
 	 local mod_key = data:get_mod_key() -- @@ refactor to use dispatch
 	 if data:get_page_name() == 'scale' then
-	    -- self:classic_scale(x,y,z,t)
-	    if script_mode == 'classic' then
-	       self:classic_scale(x,y,z,t)
-	    else
-	       self:extended_scale(x,y,z,t)
-	    end
-	    -- elseif data:get_page_name() == 'track options' then
-	    -- self:track_options(x,y,z,t)
+	    self:extended_scale(x,y,z,t)
 	 elseif mod_key == 'loop' then
 	    self:resolve_loop_keys(x,y,z,t)
 	 elseif data:get_page_name() == 'pattern' then
@@ -606,11 +490,7 @@ function gkeys:key(x,y,z)
 	       self:pattern_overlay(x,y,z,t)
 	    end
 	 elseif mod_key == 'time' then
-	    if script_mode == 'classic' then
-	       self:time_mod_classic(x,y,z,t)
-	    elseif script_mode == 'extended' then
-	       self:time_mod_extended(x,y,z,t)
-	    end
+	    self:time_mod_extended(x,y,z,t)
 	 elseif mod_key == 'prob' then
 	    self:prob_mod(x,y,z,t)
 	 else -- mods not held

@@ -326,7 +326,7 @@ end
 
 function Data:set_overlay(name)
    local num = tab.key(self.ctx.defaults.overlay_names, name)
-   num = util.clamp(num, 1, self.ctx.script_mode == 'extended' and 4 or 3)
+   num = util.clamp(num, 1, 4)
    self:set_global_val('overlay', num)
    self:post('overlay: ' .. self:get_overlay())
 end

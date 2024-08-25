@@ -18,10 +18,10 @@ function Prms:init(ctx)
    self.ctx = ctx
    params:add_separator('NORKRIA')
    self:add_globals()
-   self:script_mode_switch()
    self:add_tracks()
    params:add_separator("VOICE CONTROLS")
    nb:add_player_params()
+   self:expose_extended_params()
    return self
 end
 
@@ -30,7 +30,8 @@ function Prms:from_ctx(ctx)
    return self
 end
 
-function Prms:script_mode_switch()
+function Prms:expose_extended_params()
+   -- @@ hack
    local defs = self.ctx.defaults
    local extended_param_names = {
       globals = {
@@ -51,42 +52,22 @@ function Prms:script_mode_switch()
 	 , 'loop_group'
       }
    }
-   params:set_action(
-      'script_mode',
-      function(x)
-	 self.ctx.script_mode = x == 2 and 'extended' or 'classic'
-	 -- create global symbol for mode state
-	 for _, v in pairs(extended_param_names.globals) do
-	    if x == 2 then
-	       params:show('global_' .. v)
-	    else
-	       params:hide('global_' .. v)
-	    end
+
+   for _, v in pairs(extended_param_names.globals) do
+      params:show('global_' .. v)
+   end
+   for t = 1, defs.NUM_TRACKS do
+      for _, v in pairs(extended_param_names.per_track) do
+	 params:show(v .. '_t' .. t)
+	 params:show('T' .. t .. ' LOOP GROUPS')
+	 params:show('T' .. t .. ' DIV GROUPS')
+	 for _, v in pairs(defs.pages_with_steps) do
+	    params:show('loop_group_' .. v .. '_t' .. t)
+	    params:show('div_group_' .. v .. '_t' .. t)
 	 end
-	 for t = 1, defs.NUM_TRACKS do
-	    for _, v in pairs(extended_param_names.per_track) do
-	       if x == 2 then
-		  params:show(v .. '_t' .. t)
-		  params:show('T' .. t .. ' LOOP GROUPS')
-		  params:show('T' .. t .. ' DIV GROUPS')
-		  for _, v in pairs(defs.pages_with_steps) do
-		     params:show('loop_group_' .. v .. '_t' .. t)
-		     params:show('div_group_' .. v .. '_t' .. t)
-		  end
-	       else
-		  params:hide(v .. '_t' .. t)
-		  params:hide('T' .. t .. ' LOOP GROUPS')
-		  params:hide('T' .. t .. ' DIV GROUPS')
-		  for _, v in pairs(defs.pages_with_steps) do
-		     params:hide('loop_group_' .. v .. '_t' .. t)
-		     params:hide('div_group_' .. v .. '_t' .. t)
-		  end
-	       end
-	    end
-	 end
-	 _menu.rebuild_params()
       end
-   )
+   end
+   _menu.rebuild_params()
 end
 
 params.action_read = function(filename, _, _)
@@ -133,7 +114,6 @@ function Prms:add_globals()
 		      return defaults.division_names[x.value]
 		   end
    )
-   params:add_option('script_mode', 'SCRIPT MODE', { 'classic', 'extended' }, 1)
 
    params:add_group('OPTIONS', 7)
    data:add_binary('note_div_sync', 'NOTE DIV SYNC', 'toggle')
@@ -143,9 +123,11 @@ function Prms:add_globals()
    data:add_binary('note_sync', 'NOTE SYNC', 'toggle')
    data:add_option('loop_sync', 'LOOP SYNC', defs.div_sync_modes)
    data:add_trigger('reset_all', 'RESET')
-   data:set_action('reset_all', function(_) meta:reset_all() end)
+
+   tab.print(self.ctx.transport)
+   data:set_action('reset_all', function(_) self.ctx.transport:reset_all() end)
    data:add_trigger('advance_all', 'ADVANCE ALL')
-   data:set_action('advance_all', function() meta:advance_all() end)
+   data:set_action('advance_all', function() self.ctx.transport:advance_all() end)
 
    params:add_group('GLOBAL DATA', 12)
    data:add_binary('swing_this_step', 'swing_this_step', 'toggle')

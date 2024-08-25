@@ -27,7 +27,7 @@ end
 
 function Onboard:enc(n,d)
    local data, ctx = self.data, self.ctx
-   local script_mode = ctx.script_mode
+
    local menu_clock = function(t) self:menu_clock(t) end
    if n == 1 then
       if ctx.onboard_key_states[1] then
