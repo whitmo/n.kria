@@ -28,24 +28,20 @@
 
 --[[
 WHAT GOES IN THIS FILE:
-- includes
-- all coroutines
-- basic functions
+   - interface elements
+   - context init
+   - coroutines
+   - any addition special norkria init (nb, hs)
 
 ]]--
 
-local mu = require 'musicutil'
 local tu = require 'tabutil'
-local tab = tu
 
 local defaults = include('lib/defaults')
 local ctx = include("lib/context")
 
 ctx:preinit(defaults)
 
-local screen_graphics = include('lib/screen_graphics')
-local meta = include('lib/meta')
-local transport = include('lib/transport')
 local hs = include('lib/dualdelay')
 local nb = include("lib/nb/lib/nb")
 
@@ -59,13 +55,27 @@ function init()
 
    hs.init()
 
+   ctx.visual_metro = metro.init(redraw, 1/15, -1)
+
+   ctx.grid_metro = metro.init(
+      function()
+	 ctx.grid_graphics:render()
+      end,
+      1/60, -1
+   )
+
+   ctx.visual_metro:start()
+   ctx.grid_metro:start()
+
    print('norkria launched successfully')
 end
 
-function redraw() ctx.screen_graphics:render() end
+function redraw()
+   ctx:redraw()
+end
 
-function key(n,d) ctx:key(n,d) end
-function enc(n,d) ctx:enc(n,d) end
+function key(n,d) ctx:key(n,d); redraw() end
+function enc(n,d) ctx:enc(n,d); redraw() end
 
 function clock.transport.start()
    ctx.data:set_global_val('playing', 1)
