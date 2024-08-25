@@ -8,7 +8,6 @@ function Transport:init(ctx, data, defaults) -- @@ explode or create special .in
    self.data = data
    self.ctx = ctx
    self.defaults = defaults
-   self.meta = self.ctx.meta
    self.NUM_TRACKS = self.defaults.NUM_TRACKS
    return self
 end
@@ -47,8 +46,10 @@ function Transport:note_clock(track)
 	       self:advance_page(track,v)
 	    end
 	 end
+
 	 local description = player:describe()
-	 self.meta:update_last_notes()
+	 self.ctx.meta:update_last_notes()
+
 	 local note = description.style == 'kit' and ctx.last_notes_raw[track] or ctx.last_notes[track]
 	 player:play_note(note, (velocity-1)/6, duration/subdivision)
 
