@@ -3,9 +3,8 @@ WHAT GOES IN THIS FILE:
 - default variables
 
 ]]--
-local tu = require 'tabutil'
 
--- could be loaded from a file
+-- @@ could be loaded from a file
 local defaults = {
    -- macros
    OFF=0,
@@ -159,8 +158,6 @@ local defaults = {
       ,	'loop_sync'
    },
    track_options_xes = {0,0,1,1,0,1,0},
-   -- @@ move
-   coros = {},
 }
 
 return defaults

@@ -1,7 +1,13 @@
 -- Globals as a namespace
 
 local tu = require 'tabutil'
-local Context = {}
+local defaults = include('lib/defaults')
+
+local Context = {
+   phase = "include",
+   coros = {},
+   defaults = defaults,
+}
 
 local prms = include('lib/prms')
 local grid_graphics = include('lib/grid_graphics')
@@ -12,19 +18,21 @@ local transport = include('lib/transport')
 local onboard = include('lib/onboard')
 local data_func = include('lib/data_functions')
 
-function Context:preinit(defaults)
+function Context:preinit()
    if not norns.state.context then
       norns.state.context = {}
    end
 
    if not norns.state.context.norkria then
       norns.state.context.norkria = self
+   else
+      -- make it a singleton
+      -- don't reinit if we're already initialized
+      return norns.state.context.norkria
    end
-   self.defaults = defaults
+
    local base_values = {
-      phase = "preinit",
       matrix = self:matrix_maybe(),
-      visual_metro = metro.init(redraw, 1/15, -1),
       grid = nil,
       midi = nil,
       data = data_func,
@@ -55,7 +63,6 @@ function Context:preinit(defaults)
       kbuf = self:init_kbuf(), -- key state buffer, true/false
       onboard_key_states = {false,false,false},
       script_mode = "classic",
-      post_buffer = '-',
       loop_first = -1,
       loop_last = -1,
       wavery_light = defaults.MED,
@@ -64,40 +71,21 @@ function Context:preinit(defaults)
 
       -- objects and placeholders
       grid_metro = nil,
-      meta = nil,
-      screen_graphics = nil,
-      prms = nil,
-      -- @@ cleanup "classes" to own namespace?
-      grid_graphics = grid_graphics,
-      transport = transport:from_ctx(self),
    }
    tu.update(self, base_values)
    return self
 end
 
 function Context:key(n, d)
-   self.onboard:enc(n, d)
+   self.onboard:key(n, d)
 end
 
 function Context:enc(n, d)
    self.onboard:enc(n, d)
 end
 
-function Context:step_ticker()
-   local data = self.data
-   while true do
-      clock.sync(1/4)
-      if data:get_global_val('swing_this_step') == 1 then
-	 data:set_global_val('swing_this_step',0)
-	 local amt = (clock.get_beat_sec()/4)*((data:get_global_val('swing')-50)/100)
-	 clock.sleep(amt)
-      else
-	 data:set_global_val('swing_this_step',1)
-      end
-      if data:get_global_val('playing') == 1 then
-	 self.transport:advance_all()
-      end
-   end
+function Context:redraw()
+   return self.screen_graphics:render()
 end
 
 function Context:init()
@@ -111,14 +99,11 @@ function Context:init()
    self.screen_graphics = screen_graphics:from_ctx(self)
    self.gkeys = gkeys:from_ctx(self)
    self.transport = transport:from_ctx(self)
-   self.grid_graphics:from_ctx(self)
+   self.grid_graphics = grid_graphics:from_ctx(self)
 
-   self.grid_metro = metro.init(
-      function()
-	 self.grid_graphics:render()
-      end,
-      1/60, -1
-   )
+
+
+
 
    self.last_touched_track = self.data:at()
    self.last_touched_page = self.data:get_page_name()
@@ -126,17 +111,14 @@ function Context:init()
    self:init_modulation_sources()
    self:init_value_buffer()
 
-   self.visual_metro:start()
-   self.grid_metro:start()
-
    self.track_clipboard = self.meta:get_track_copy(0)
    self.page_clipboards = self.meta:get_track_copy(0)
 
    local step_ticker = function() self:step_ticker() end
 
-   coros.step_ticker = clock.run(step_ticker)
+   self.coros.step_ticker = clock.run(step_ticker)
 
-   coros.intro = clock.run(function () self:intro() end)
+   self.coros.intro = clock.run(function () self:intro() end)
    self.phase = "init"
    return self
 end
@@ -188,12 +170,12 @@ function Context:init_value_buffer()
 end
 
 function Context:init_kbuf()
-   local kbuf = {}
+   self.kbuf = {}
    for x=1,16 do
-      table.insert(kbuf ,{})
-      for y=1,8 do kbuf[x][y] = false end
+      table.insert(self.kbuf ,{})
+      for y=1,8 do self.kbuf[x][y] = false end
    end
-   return kbuf
+   return self.kbuf
 end
 
 function Context:matrix_maybe()
@@ -209,8 +191,11 @@ function Context:post(str, intro)
    -- second arg: send true if we shouldn't interrupt the intro sequence.
    -- basically don't worry about it
    self.post_buffer = str
-   if (not intro) and (coros.intro) then
-      clock.cancel(coros.intro)
+   if not self.coros then
+      self.coros = {}
+   end
+   if (not intro) and (self.coros.intro) then
+      clock.cancel(self.coros.intro)
    end
 end
 
@@ -222,4 +207,21 @@ function Context:pattern_longpress_clock(x)
    end
 end
 
-return Context
+function Context:step_ticker()
+   local data = self.data
+   while true do
+      clock.sync(1/4)
+      if data:get_global_val('swing_this_step') == 1 then
+	 data:set_global_val('swing_this_step',0)
+	 local amt = (clock.get_beat_sec()/4)*((data:get_global_val('swing')-50)/100)
+	 clock.sleep(amt)
+      else
+	 data:set_global_val('swing_this_step',1)
+      end
+      if data:get_global_val('playing') == 1 then
+	 self.transport:advance_all()
+      end
+   end
+end
+
+return Context:preinit()
