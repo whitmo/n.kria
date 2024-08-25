@@ -5,7 +5,6 @@ WHAT GOES IN THIS FILE:
 
 
 local tab = require 'tabutil'
-local transport = include('lib/transport')
 
 local Onboard = {}
 
@@ -16,7 +15,6 @@ function Onboard:init(ctx, data)
 end
 
 function Onboard:from_ctx(ctx)
-   print(ctx)
    self:init(ctx, ctx.data)
    return self
 end
@@ -30,23 +28,23 @@ end
 function Onboard:enc(n,d)
    local data, ctx = self.data, self.ctx
    local script_mode = ctx.script_mode
-   local menu_clock = function(n) self:menu_clock(n) end
+   local menu_clock = function(t) self:menu_clock(t) end
    if n == 1 then
       if ctx.onboard_key_states[1] then
-	 if coros.shift_e1 then clock.cancel(coros.shift_e1) end
-	 coros.shift_e1 = clock.run(menu_clock,2)
+	 if ctx.coros.shift_e1 then clock.cancel(ctx.coros.shift_e1) end
+	 ctx.coros.shift_e1 = clock.run(menu_clock,2)
 	 data:delta_global_val('swing',d)
 	 ctx:post('swing: ' .. data:get_global_val('swing'))
       else
-	 if coros.e1 then clock.cancel(coros.e1) end
-	 coros.e1 = clock.run(menu_clock,1)
+	 if ctx.coros.e1 then clock.cancel(ctx.coros.e1) end
+	 ctx.coros.e1 = clock.run(menu_clock,1)
 	 params:delta('clock_tempo',d)
 	 ctx:post('tempo: ' .. util.round(params:get('clock_tempo')))
       end
    elseif n == 2 then
       if script_mode == 'extended' then
-	 if coros.e2 then clock.cancel(coros.e2) end
-	 coros.e2 = clock.run(menu_clock,3)
+	 if ctx.coros.e2 then clock.cancel(ctx.coros.e2) end
+	 ctx.coros.e2 = clock.run(menu_clock,3)
 	 if ctx.onboard_key_states[1] then
 	    if d > 0 then
 	       data:set_global_val('stretch',data:get_global_val('stretch')<0 and 0 or 64)
@@ -60,8 +58,10 @@ function Onboard:enc(n,d)
       end
    elseif n == 3 then
       if script_mode == 'extended' then
-	 if coros.e3 then clock.cancel(coros.e3) end
-	 coros.e3 = clock.run(menu_clock,4)
+	 if ctx.coros.e3 then
+	    clock.cancel(ctx.coros.e3)
+	 end
+	 ctx.coros.e3 = clock.run(menu_clock,4)
 	 if ctx.onboard_key_states[1] then
 	    if d > 0 then
 	       data:set_global_val('push',data:get_global_val('push')<0 and 0 or 64)
@@ -106,9 +106,9 @@ function Onboard:key(n,d)
 	 data:set_overlay((n==2) and 'time' or 'options')
       elseif (not ctx.onboard_key_states[1]) and (self:track_key_held()==0 and self:page_key_held()==0) then
 	 if n==2 then
-	    transport:reset_all()
+	    ctx.transport:reset_all()
 	 elseif n==3 then
-	    transport:play_pause()
+	    ctx.transport:play_pause()
 	 end
       elseif (not ctx.onboard_key_states[1]) and (self:track_key_held()~=0) then
 	 ctx.just_pressed_clipboard_key = true

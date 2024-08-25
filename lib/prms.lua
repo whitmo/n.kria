@@ -5,11 +5,11 @@ WHAT GOES IN THIS FILE:
 --
 
 local nb = include('lib/nb/lib/nb')
-
 local rw = include('lib/pset_rewriter')
 local defaults = include("lib/defaults")
 
-local tu = require 'tabutil'
+local tab = require 'tabutil'
+local mu = require 'musicutil'
 
 local Prms = {}
 
@@ -31,6 +31,7 @@ function Prms:from_ctx(ctx)
 end
 
 function Prms:script_mode_switch()
+   local defs = self.ctx.defaults
    local extended_param_names = {
       globals = {
 	 'stretch'
@@ -53,7 +54,7 @@ function Prms:script_mode_switch()
    params:set_action(
       'script_mode',
       function(x)
-	 self.ctx.script_mode = x
+	 self.ctx.script_mode = x == 2 and 'extended' or 'classic'
 	 -- create global symbol for mode state
 	 for _, v in pairs(extended_param_names.globals) do
 	    if x == 2 then
@@ -62,13 +63,13 @@ function Prms:script_mode_switch()
 	       params:hide('global_' .. v)
 	    end
 	 end
-	 for t = 1, NUM_TRACKS do
+	 for t = 1, defs.NUM_TRACKS do
 	    for _, v in pairs(extended_param_names.per_track) do
 	       if x == 2 then
 		  params:show(v .. '_t' .. t)
 		  params:show('T' .. t .. ' LOOP GROUPS')
 		  params:show('T' .. t .. ' DIV GROUPS')
-		  for _, v in pairs(pages_with_steps) do
+		  for _, v in pairs(defs.pages_with_steps) do
 		     params:show('loop_group_' .. v .. '_t' .. t)
 		     params:show('div_group_' .. v .. '_t' .. t)
 		  end
@@ -76,7 +77,7 @@ function Prms:script_mode_switch()
 		  params:hide(v .. '_t' .. t)
 		  params:hide('T' .. t .. ' LOOP GROUPS')
 		  params:hide('T' .. t .. ' DIV GROUPS')
-		  for _, v in pairs(pages_with_steps) do
+		  for _, v in pairs(defs.pages_with_steps) do
 		     params:hide('loop_group_' .. v .. '_t' .. t)
 		     params:hide('div_group_' .. v .. '_t' .. t)
 		  end
@@ -88,10 +89,11 @@ function Prms:script_mode_switch()
    )
 end
 
-params.action_read = function(filename, name, pset_number)
+params.action_read = function(filename, _, _)
    local patternfile = filename .. ".kriapattern"
+   local ctx = Prms.ctx
    if util.file_exists(patternfile) then
-      self.ctx.data.patterns = tab.load(patternfile)
+      ctx.data.patterns = tab.load(patternfile)
    elseif params.last_chance then
       params.last_chance = nil
    else
@@ -105,14 +107,14 @@ params.action_read = function(filename, name, pset_number)
    end
 end
 
-params.action_write = function(filename, name, pset_number)
-   tab.save(self.ctx.data.patterns, filename .. ".norkriapattern")
+params.action_write = function(filename, _, _)
+   tab.save(Prms.ctx.data.patterns, filename .. ".norkriapattern")
 end
 
 function Prms:add_globals()
    local data = self.data
-   local new_env = tu.update(_ENV, defaults)
-   local _ENV = new_env
+   local defs = self.ctx.defaults
+   local meta = self.ctx.meta
 
    data:add_binary('playing', 'PLAYING?', 'toggle')
    data:add_number('root_note', 'ROOT NOTE', 0, 11, 0,
@@ -137,24 +139,24 @@ function Prms:add_globals()
    data:add_binary('note_div_sync', 'NOTE DIV SYNC', 'toggle')
    data:add_binary('div_cue', 'DIV CUE', 'toggle')
 
-   data:add_option('div_sync', 'DIV SYNC', div_sync_modes)
+   data:add_option('div_sync', 'DIV SYNC', defs.div_sync_modes)
    data:add_binary('note_sync', 'NOTE SYNC', 'toggle')
-   data:add_option('loop_sync', 'LOOP SYNC', div_sync_modes)
+   data:add_option('loop_sync', 'LOOP SYNC', defs.div_sync_modes)
    data:add_trigger('reset_all', 'RESET')
-   data:set_action('reset_all', function(x) meta:reset_all() end)
+   data:set_action('reset_all', function(_) meta:reset_all() end)
    data:add_trigger('advance_all', 'ADVANCE ALL')
    data:set_action('advance_all', function() meta:advance_all() end)
 
    params:add_group('GLOBAL DATA', 12)
    data:add_binary('swing_this_step', 'swing_this_step', 'toggle')
-   data:add_number('active_track', 'active track', 1, NUM_TRACKS, 1)
-   data:add_option('mod', 'mod key held', mod_names, 1)
-   data:add_number('scale_num', 'selected scale', 1, NUM_SCALES, 1)
-   data:add_option('overlay', 'overlay', overlay_names, 1)
-   data:add_option('patcher', 'patcher', patchers, 1)
+   data:add_number('active_track', 'active track', 1, defs.NUM_TRACKS, 1)
+   data:add_option('mod', 'mod key held', defs.mod_names, 1)
+   data:add_number('scale_num', 'selected scale', 1, defs.NUM_SCALES, 1)
+   data:add_option('overlay', 'overlay', defs.overlay_names, 1)
+   data:add_option('patcher', 'patcher', defs.patchers, 1)
    data:add_number('page', 'page', 1, 6, 1)
    data:add_binary('alt_page', 'alt page?', 'toggle')
-   data:add_number('active_pattern', 'pattern', 1, NUM_PATTERNS, 1)
+   data:add_number('active_pattern', 'pattern', 1, defs.NUM_PATTERNS, 1)
    data:set_action('active_pattern', function(x) data.pattern = x end)
 
    data.pattern = data['active_pattern']:get()
@@ -182,7 +184,7 @@ function Prms:add_globals()
    for i = 1, 16 do
       local scale = data.scales[i]
       for j = 1, 7 do
-	 local default_value = scale_defaults[i][j]
+	 local default_value = defs.scale_defaults[i][j]
 	 scale:add_number(j, 'scale_' .. i .. '_deg_' .. j, 0, 7, default_value)
       end
    end
@@ -190,21 +192,24 @@ function Prms:add_globals()
 end
 
 function Prms:add_tracks()
+   local defs = self.ctx.defaults
+   local ctx = self.ctx
+
    params:add_separator('TRACK CONTROLS')
 
-   for t = 1, NUM_TRACKS do
+   for t = 1, defs.NUM_TRACKS do
       local track = self.data.tracks[t]
-      params:add_group(lexi_names[t], 30)
+      params:add_group(defs.lexi_names[t], 30)
       nb:add_param("voice_t" .. t, "T" .. t .. " OUTPUT")
       track.player = params:lookup_param('voice_t' .. t)
-      track:add_option('play_mode', 'PLAY MODE', play_modes, 1)
+      track:add_option('play_mode', 'PLAY MODE', defs.play_modes, 1)
       track:add_binary('mute', 'MUTE', 'toggle')
       track:add_trigger('reset', 'RESET')
-      track:set_action('reset', function(x) transport:reset_track(t) end)
+      track:set_action('reset', function(_) ctx.transport:reset_track(t) end)
       track:add_trigger('advance', 'ADVANCE')
       track:set_action('advance', function()
 			  if params:get('param_clock_t' .. t) == 1 then
-			     transport:advance_track(t)
+			     ctx.transport:advance_track(t)
 			     -- print('advancing track '..t)
 			  end
       end)
@@ -213,23 +218,23 @@ function Prms:add_tracks()
       track:add_binary('trigger_clock', 'TRIGGER CLOCK?', 'toggle', 0)
       track:add_binary('param_clock', 'PARAM CLOCK?', 'toggle', 0)
       params:add_separator('T' .. t .. ' DIV GROUPS')
-      track:add_number('div_group', 'TRACK', 0, NUM_SYNC_GROUPS, 0, function(x)
+      track:add_number('div_group', 'TRACK', 0, defs.NUM_SYNC_GROUPS, 0, function(x)
 			  return x.value == 0 and 'global' or x.value
       end)
-      for _, v in ipairs(pages_with_steps) do
+      for _, v in ipairs(defs.pages_with_steps) do
 	 local page = track[v]
-	 page:add_number('div_group', string.upper(v), 0, NUM_SYNC_GROUPS, 0,
+	 page:add_number('div_group', string.upper(v), 0, defs.NUM_SYNC_GROUPS, 0,
 			 function(x)
 			    return x.value == 0 and 'track' or x.value
 	 end)
       end
       params:add_separator('T' .. t .. ' LOOP GROUPS')
-      track:add_number('loop_group', 'TRACK', 0, NUM_SYNC_GROUPS, 0, function(x)
+      track:add_number('loop_group', 'TRACK', 0, defs.NUM_SYNC_GROUPS, 0, function(x)
 			  return x.value == 0 and 'global' or x.value
       end)
-      for _, v in ipairs(pages_with_steps) do
+      for _, v in ipairs(defs.pages_with_steps) do
 	 local page = track[v]
-	 page:add_number('loop_group', string.upper(v), 0, NUM_SYNC_GROUPS, 0,
+	 page:add_number('loop_group', string.upper(v), 0, defs.NUM_SYNC_GROUPS, 0,
 			 function(x)
 			    return x.value == 0 and 'track' or x.value
 	 end)
@@ -242,7 +247,7 @@ function Prms:add_tracks()
       track:add_group('track_data', 34)
       track:add_number('octave_shift', 'octave_shift_t' .. t, 1, 8, 4)
       track:add_number('gate_shift', 'gate_shift_t' .. t, 1, 16, 8)
-      for k, v in pairs(pages_with_steps) do
+      for _, v in pairs(defs.pages_with_steps) do
 	 local page = track[v]
 	 page:add_number('pos', 'data', 1, 16, 1)
 	 page:add_number('cued_divisor', 'data', 0, 16, 0)

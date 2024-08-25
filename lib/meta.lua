@@ -60,8 +60,8 @@ end
 
 function Meta:update_last_notes()
    local value_buffer = self.ctx.value_buffer
-   local last_notes = self.defaults.last_notes
-   local last_notes_raw = self.defaults.last_notes_raw
+   local last_notes = self.ctx.last_notes
+   local last_notes_raw = self.ctx.last_notes_raw
    for t=1, self.NUM_TRACKS do
       local b = value_buffer[t]
       local n = b.note
@@ -129,7 +129,7 @@ function Meta:edit_divisor(track,p,new_val)
    if group_to_edit == 0 then
       group_to_edit = self.data:get_track_val(track,'div_group')
    end
-   for t=1,self.default.NUM_TRACKS do
+   for t=1,self.defaults.NUM_TRACKS do
       for k,v in pairs(self.defaults.pages_with_steps) do
 	 local this_page_group = self.data:get_page_val(t,v,'div_group')
 	 if this_page_group == 0 then
@@ -181,7 +181,7 @@ function Meta:edit_loop_classic(track, first, last)
       end
       self.ctx:post('t'..track..' loops: ['..f..'-'..l..']')
    elseif loopsync == 'all' then
-      for t=1, self.default.NUM_TRACKS do
+      for t=1, self.defaults.NUM_TRACKS do
 	 for k,v in ipairs(combined_page_list) do
 	    if v == 'scale' or v == 'pattern' then break end
 	    self.data:set_page_val(t,v,'loop_first',f)
@@ -220,7 +220,7 @@ function Meta:edit_loop_extended(track, first, last, temporary)
 	 group_to_edit = self.data:get_track_val(track,'loop_group')
       end
       local pages_with_steps = self.defaults.pages_with_steps
-      for t=1,self.default.NUM_TRACKS do
+      for t=1,self.defaults.NUM_TRACKS do
 	 for k,v in pairs(pages_with_steps) do
 	    local this_page_group = self.data:get_page_val(t,v,'loop_group')
 	    if this_page_group == 0 then

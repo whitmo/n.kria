@@ -122,7 +122,7 @@ function Graphics:scale()
 end
 
 function Graphics:config_descriptions()
-   local script_mode = params:string('script_mode')
+   local script_mode = self.ctx.script_mode
    local line_1,line_2;
    if script_mode == 'classic' then
       line_1 = config_desc[1][self.data:get_global_val('note_sync') + 1]
@@ -141,36 +141,36 @@ function Graphics:config_descriptions()
 end
 
 function Graphics:time_descriptions()
-	local rune_1 = self.data:get_global_val('note_div_sync')
-	local rune_3 = self.data:get_global_val('div_sync')
-	local script_mode = params:string('script_mode')
-	local desc_num = 0
+   local defs = self.ctx.defaults
+   local rune_1 = self.data:get_global_val('note_div_sync')
+   local rune_3 = self.data:get_global_val('div_sync')
+   local script_mode = params:string('script_mode')
+   local desc_num = 0
 
-	if script_mode == 'classic' then
-	   if 		(rune_1 == 0) and (rune_3 == 1) then desc_num = 1
-	   elseif	(rune_1 == 1) and (rune_3 == 1) then desc_num = 2
-	   elseif 	(rune_1 == 0) and (rune_3 == 2) then desc_num = 3
-	   elseif 	(rune_1 == 1) and (rune_3 == 2) then desc_num = 4
-	   elseif 	(rune_1 == 0) and (rune_3 == 3) then desc_num = 5
-	   elseif 	(rune_1 == 1) and (rune_3 == 3) then desc_num = 6
-	   end
+   if script_mode == 'classic' then
+      if        (rune_1 == 0) and (rune_3 == 1) then desc_num = 1
+      elseif	(rune_1 == 1) and (rune_3 == 1) then desc_num = 2
+      elseif 	(rune_1 == 0) and (rune_3 == 2) then desc_num = 3
+      elseif 	(rune_1 == 1) and (rune_3 == 2) then desc_num = 4
+      elseif 	(rune_1 == 0) and (rune_3 == 3) then desc_num = 5
+      elseif 	(rune_1 == 1) and (rune_3 == 3) then desc_num = 6
+      end
 
-	   local desc = time_desc[desc_num]
-	   s.move(64,40)
-	   s.level(OFF)
-	   s.text_center(string.upper(desc[1]))
-	   if tab.count(desc) > 1 then
-	      s.move(64,48)
-	      s.text_center(string.upper(desc[2]))
-	   end
-	elseif script_mode == 'extended' then
-	   s.level(OFF)
-	   s.move(64,40)
-	   s.text_center('N.KRIA IS IN EXTENDED MODE')
-	   s.move(64,48)
-	   s.text_center('USE TIME MOD PAGE INSTEAD')
-	end
-
+      local desc = defs.time_desc[desc_num]
+      s.move(64,40)
+      s.level(OFF)
+      s.text_center(string.upper(desc[1]))
+      if tab.count(desc) > 1 then
+	 s.move(64,48)
+	 s.text_center(string.upper(desc[2]))
+      end
+   elseif script_mode == 'extended' then
+      s.level(OFF)
+      s.move(64,40)
+      s.text_center('N.KRIA IS IN EXTENDED MODE')
+      s.move(64,48)
+      s.text_center('USE TIME MOD PAGE INSTEAD')
+   end
 end
 
 function Graphics:right_windows()
@@ -197,7 +197,8 @@ function Graphics:right_windows()
 	   s.move(125,(height*k)-2)
 	   local str = ''
 	   if v == 'BPM' then
-	      str = blink.menu[k] and util.round(params:get('clock_tempo')) or 'BPM'
+	      str = blink.menu[k] and
+		 util.round(params:get('clock_tempo')) or 'BPM'
 	   elseif v == 'SWING' then
 	      str = blink.menu[k] and self.data:get_global_val('swing')..'%' or 'SWING'
 	   elseif v == 'STRETCH' then

@@ -1,5 +1,4 @@
-local tu = require 'tabutil'
-local tab = tu
+local tab = require 'tabutil'
 local mu = require 'musicutil'
 
 local Transport = {}
@@ -9,6 +8,7 @@ function Transport:init(ctx, data, defaults) -- @@ explode or create special .in
    self.data = data
    self.ctx = ctx
    self.defaults = defaults
+   self.meta = self.ctx.meta
    self.NUM_TRACKS = self.defaults.NUM_TRACKS
    return self
 end
@@ -19,7 +19,7 @@ function Transport:from_ctx(ctx)
 end
 
 function Transport:current_val(track, page)
-   return self.defaults.value_buffer[track][page]
+   return self.ctx.value_buffer[track][page]
 end
 
 function Transport:note_clock(track)
@@ -93,7 +93,7 @@ function Transport:play_pause()
 end
 
 function Transport:reset_all()
-   for t=1, self.self.NUM_TRACKS do
+   for t=1, self.NUM_TRACKS do
       self:reset_track(t)
    end
    self.ctx.pulse_indicator = 1
@@ -129,7 +129,7 @@ function Transport:advance_all()
 
       self:advance_pattern_page()
 
-      for t=1, self.self.NUM_TRACKS do
+      for t=1, self.NUM_TRACKS do
 	 if self.data:get_track_val(t,'param_clock') == 0 then
 	    self:advance_track(t)
 	 end
@@ -232,7 +232,8 @@ Transport.modal_page_handlers = {
        elseif new < first then
 	  new = first
        end
-       -- ^ have to do it this way vs out_of_bounds() because we want to get to the closest boundary, not necessarily first or last step in loop.
+       -- ^ have to do it this way vs out_of_bounds() because
+       -- we want to get to the closest boundary, not necessarily first or last step in loop.
        return new, false
     end,
     random = function (_, _, _, first, last, _, _, _)
@@ -265,7 +266,7 @@ function Transport:advance_page(t,p,real,playing) -- track,page
 
    local prob_map = self.ctx.defaults.prob_map
    if playing and math.random(0,99) < prob_map[self.data:get_step_val(t,p,self.data:get_pos(t,p), 'prob')] then
-      if ctx.matrix and tab.contains(ctx.matrix_sources,p) then
+      if ctx.matrix and tab.contains(ctx.defaults.matrix_sources, p) then
 	 ctx.matrix:set(p..'_t'..t, (self.data:get_step_val(t,p,self.data:get_pos(t,p))-1)/6)
       end
       if self.data:get_track_val(t,'mute') == 0 then

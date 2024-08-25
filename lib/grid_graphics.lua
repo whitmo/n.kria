@@ -3,16 +3,16 @@
    - everything related to how grid looks
 ]]--
 
-
--- local tu = require "lib/tabutil"
-
--- local data = include("lib/data_functions")
-
 local Graphics = {}
 local defaults = include("lib/defaults")
-local tu = require 'tabutil'
+
 local HIGH, MED, LOW, OFF = defaults.HIGH, defaults.MED, defaults.LOW, defaults.OFF
 local NUM_TRACKS = defaults.NUM_TRACKS
+
+function Graphics:from_ctx(ctx)
+   self:init(ctx, ctx.data, ctx.grid)
+   return self
+end
 
 function Graphics:init(ctx, data, grid)
    self.data = data
@@ -25,6 +25,9 @@ function Graphics:trig()
    local data = self.data
 
    local l
+   local playing = data:get_global_val('playing')
+   local mod_key = data:get_mod_key()
+
    for t=1, NUM_TRACKS do
       for x=1,16 do
 	 local this_trig_on = data:get_step_val(t,'trig',x) == 1
@@ -43,14 +46,12 @@ function Graphics:trig()
 	    end
 	 end
 
-
-
 	 if x == data:get_pos(t,'trig')
-	    and data:get_global_val('playing') == 1 then
+	    and playing == 1 then
 	    l = self.highlight(l)
 	 end
 
-	 if data:get_mod_key() == 'loop' and not oob then
+	 if mod_key == 'loop' and not oob then
 	    l = self.highlight(l)
 	 end
 
@@ -59,10 +60,6 @@ function Graphics:trig()
    end
 end
 
-function Graphics:from_ctx(ctx)
-   self:init(ctx, ctx.data, ctx.grid)
-   return self
-end
 
 function Graphics:render()
    local g = self.g
@@ -85,7 +82,9 @@ function Graphics:render()
    -- \/\/ these are in order of precedence \/\/
    local p = data:get_page_name()
    local overlay = data:get_overlay()
+   -- @@ value is set wrong
    local mode = ctx.script_mode
+
    if overlay == 'time' then self:config_1()
    elseif overlay == 'options' then self:config_2()
    elseif overlay == 'patchers' then self:patchers()
@@ -290,9 +289,10 @@ function Graphics:time(D)
 
    g:led(data:get_page_val(active_track,data:get_page_name(),'counter'),1,MED)
 
-   local script_mode = params:string('script_mode')
+   local script_mode = self.ctx.script_mode
+
    if script_mode == 'classic' or D then return end
-   for i=1, ctx.NUM_SYNC_GROUPS do
+   for i=1, ctx.defaults.NUM_SYNC_GROUPS do
       local x1 = ((i-1)%4)+1
       local y1 = util.round_up(i/4)+4
 
@@ -507,6 +507,7 @@ function Graphics:retrig()
    local active_track = data:at()
    local kbuf = self.ctx.kbuf
    local g = self.g
+   local playing = data:get_global_val('playing') == 1
 
    for x=1,16 do
       for y=1,7 do
@@ -514,7 +515,7 @@ function Graphics:retrig()
 	 local oob = data:out_of_bounds(active_track,'retrig',x)
 	 if y == 1 or y == 7 then
 	    l = kbuf[x][y] and HIGH or LOW
-	    if data:get_pos(active_track,'retrig') == x and data:get_global_val('playing') == 1 then
+	    if data:get_pos(active_track,'retrig') == x and playing then
 	       l = self.highlight(l)
 	    end
 	 else
@@ -538,9 +539,12 @@ function Graphics:note()
    local l
    local data = self.data
    local active_track = data:at()
+   local playing = data:get_global_val('playing') == 1
+   local mod_key = data:get_mod_key()
+
    for x=1,16 do
       local d = data:get_step_val(active_track,'note',x)
-      if x == data:get_pos(active_track,'note') and data:get_global_val('playing') == 1 then
+      if x == data:get_pos(active_track,'note') and playing then
 	 l = LOW
       else
 	 l = OFF
@@ -553,7 +557,7 @@ function Graphics:note()
 	       ly = data:out_of_bounds(active_track,'note',x) and self.dim(LOW) or LOW
 	    end
 	 end
-	 if data:get_mod_key() == 'loop' and not data:out_of_bounds(active_track,'note',x) then
+	 if mod_key == 'loop' and not data:out_of_bounds(active_track,'note',x) then
 	    ly = self.highlight(ly)
 	 end
 	 self.g:led(x,8-y,ly)
@@ -565,9 +569,11 @@ function Graphics:transpose() -- identical to above, might want to fold them tog
    local l
    local data = self.data
    local active_track = data:at()
+   local playing = data:get_global_val('playing') == 1
+
    for x=1,16 do
       local d = data:get_step_val(active_track,'transpose',x)
-      if x == data:get_pos(active_track,'transpose') and data:get_global_val('playing') == 1 then
+      if x == data:get_pos(active_track,'transpose') and playing then
 	 l = LOW
       else
 	 l = OFF
@@ -594,6 +600,7 @@ function Graphics:octave()
       g:led(i,1,data:get_track_val(active_track,'octave_shift')==i and HIGH or MED)
    end
 
+   local playing = data:get_global_val('playing') == 1
    for x=1,16 do
       local d = data:get_step_val(active_track,'octave',x)
       local oob = data:out_of_bounds(active_track,'octave',x)
@@ -617,7 +624,7 @@ function Graphics:octave()
 	 if data:get_mod_key() == 'loop' and (not oob) then
 	    l = self.highlight(l)
 	 end
-	 if x == data:get_pos(active_track,'octave') and data:get_global_val('playing') == 1 then
+	 if x == data:get_pos(active_track,'octave') and playing then
 	    l = self.highlight(l)
 	 end
 	 g:led(x,8-i,l)
@@ -628,6 +635,8 @@ end
 function Graphics:slide()
    local data = self.data
    local active_track = data:at()
+   local playing = data:get_global_val('playing') == 1
+
    for x=1,16 do
       local l = OFF
       local d = data:get_step_val(active_track,'slide',x)
@@ -654,7 +663,7 @@ function Graphics:slide()
 	 if data:get_mod_key() == 'loop' and not oob then
 	    l = self.highlight(l)
 	 end
-	 if x == data:get_pos(active_track,'slide') and data:get_global_val('playing') == 1 then
+	 if x == data:get_pos(active_track,'slide') and playing then
 	    l = self.highlight(l)
 	 end
 	 self.g:led(x,8-y,l)
@@ -734,7 +743,7 @@ function Graphics:velocity(D)
 
    local script_mode = ctx.script_mode
    if script_mode == 'classic' or D then return end
-   for i=1, ctx.NUM_SYNC_GROUPS do
+   for i=1, ctx.defaults.NUM_SYNC_GROUPS do
       local x1 = ((i-1)%4)+1
       local y1 = util.round_up(i/4)+4
 
