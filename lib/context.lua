@@ -62,7 +62,6 @@ function Context:preinit()
       just_pressed_track = false,
       kbuf = self:init_kbuf(), -- key state buffer, true/false
       onboard_key_states = {false,false,false},
-      script_mode = "classic",
       loop_first = -1,
       loop_last = -1,
       wavery_light = defaults.MED,
@@ -93,17 +92,14 @@ function Context:init()
    self.grid = grid.connect()
 
    self.data = self.data:from_ctx(self)  -- @@init order dep
+   self.transport = transport:from_ctx(self)
    self.prms = prms:from_ctx(self)       -- ^^
    self.onboard = onboard:from_ctx(self)
    self.meta = meta:from_ctx(self)
    self.screen_graphics = screen_graphics:from_ctx(self)
    self.gkeys = gkeys:from_ctx(self)
-   self.transport = transport:from_ctx(self)
+
    self.grid_graphics = grid_graphics:from_ctx(self)
-
-
-
-
 
    self.last_touched_track = self.data:at()
    self.last_touched_page = self.data:get_page_name()
