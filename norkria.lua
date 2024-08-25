@@ -73,11 +73,10 @@ function clock.transport.start()
 end
 
 function clock.transport.stop()
-   ctx.data:global_set_val('playing', 0)
+   ctx.data:set_global_val('playing', 0)
    ctx:post('stop')
 end
 
 function cleanup()
-   Data = nil
    norns.state.context.nkria = nil
 end
