@@ -35,44 +35,35 @@ function Onboard:enc(n,d)
 	 ctx.coros.shift_e1 = clock.run(menu_clock,2)
 	 data:delta_global_val('swing',d)
 	 ctx:post('swing: ' .. data:get_global_val('swing'))
-      else
-	 if ctx.coros.e1 then clock.cancel(ctx.coros.e1) end
-	 ctx.coros.e1 = clock.run(menu_clock,1)
-	 params:delta('clock_tempo',d)
-	 ctx:post('tempo: ' .. util.round(params:get('clock_tempo')))
       end
    elseif n == 2 then
-      if script_mode == 'extended' then
-	 if ctx.coros.e2 then clock.cancel(ctx.coros.e2) end
-	 ctx.coros.e2 = clock.run(menu_clock,3)
-	 if ctx.onboard_key_states[1] then
-	    if d > 0 then
-	       data:set_global_val('stretch',data:get_global_val('stretch')<0 and 0 or 64)
-	    else
-	       data:set_global_val('stretch',data:get_global_val('stretch')>0 and 0 or -64)
-	    end
+      if ctx.coros.e2 then clock.cancel(ctx.coros.e2) end
+      ctx.coros.e2 = clock.run(menu_clock,3)
+      if ctx.onboard_key_states[1] then
+	 if d > 0 then
+	    data:set_global_val('stretch',data:get_global_val('stretch')<0 and 0 or 64)
 	 else
-	    data:delta_global_val('stretch',d)
+	    data:set_global_val('stretch',data:get_global_val('stretch')>0 and 0 or -64)
 	 end
-	 ctx:post('stretch: ' .. data:get_global_val('stretch'))
+      else
+	 data:delta_global_val('stretch',d)
       end
+      ctx:post('stretch: ' .. data:get_global_val('stretch'))
    elseif n == 3 then
-      if script_mode == 'extended' then
-	 if ctx.coros.e3 then
-	    clock.cancel(ctx.coros.e3)
-	 end
-	 ctx.coros.e3 = clock.run(menu_clock,4)
-	 if ctx.onboard_key_states[1] then
-	    if d > 0 then
-	       data:set_global_val('push',data:get_global_val('push')<0 and 0 or 64)
-	    else
-	       data:set_global_val('push',data:get_global_val('push')>0 and 0 or -64)
-	    end
-	 else
-	    data:delta_global_val('push',d)
-	 end
-	 ctx:post('push: '.. data:get_global_val('push'))
+      if ctx.coros.e3 then
+	 clock.cancel(ctx.coros.e3)
       end
+      ctx.coros.e3 = clock.run(menu_clock,4)
+      if ctx.onboard_key_states[1] then
+	 if d > 0 then
+	    data:set_global_val('push',data:get_global_val('push')<0 and 0 or 64)
+	 else
+	    data:set_global_val('push',data:get_global_val('push')>0 and 0 or -64)
+	 end
+      else
+	 data:delta_global_val('push',d)
+      end
+      ctx:post('push: '.. data:get_global_val('push'))
    end
 end
 

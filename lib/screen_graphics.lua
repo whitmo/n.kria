@@ -39,7 +39,6 @@ function Graphics:render()
    local overlay = self.data:get_overlay()
    if overlay == 'time' then
       self:description_window()
-      self:time_descriptions()
    elseif overlay == 'options' then
       self:description_window()
       self:config_descriptions()
@@ -133,100 +132,65 @@ function Graphics:config_descriptions()
 
 end
 
-function Graphics:time_descriptions()
-   local defs = self.ctx.defaults
-   local rune_1 = self.data:get_global_val('note_div_sync')
-   local rune_3 = self.data:get_global_val('div_sync')
-   local script_mode = params:string('script_mode')
-   local desc_num = 0
-
-   if script_mode == 'classic' then
-      if        (rune_1 == 0) and (rune_3 == 1) then desc_num = 1
-      elseif	(rune_1 == 1) and (rune_3 == 1) then desc_num = 2
-      elseif 	(rune_1 == 0) and (rune_3 == 2) then desc_num = 3
-      elseif 	(rune_1 == 1) and (rune_3 == 2) then desc_num = 4
-      elseif 	(rune_1 == 0) and (rune_3 == 3) then desc_num = 5
-      elseif 	(rune_1 == 1) and (rune_3 == 3) then desc_num = 6
-      end
-
-      local desc = defs.time_desc[desc_num]
-      s.move(64,40)
-      s.level(OFF)
-      s.text_center(string.upper(desc[1]))
-      if tab.count(desc) > 1 then
-	 s.move(64,48)
-	 s.text_center(string.upper(desc[2]))
-      end
-   elseif script_mode == 'extended' then
-      s.level(OFF)
-      s.move(64,40)
-      s.text_center('N.KRIA IS IN EXTENDED MODE')
-      s.move(64,48)
-      s.text_center('USE TIME MOD PAGE INSTEAD')
-   end
-end
-
 function Graphics:right_windows()
-	local left_border = 92
-	local height = 10
-	local ctx = self.ctx
-	local names = {
-		'BPM'
-	,	'SWING'
-	,	'STRETCH'
-	,	'PUSH'
-	}
+   local left_border = 92
+   local height = 10
+   local ctx = self.ctx
+   local names = {
+      'BPM'
+      ,	'SWING'
+      ,	'STRETCH'
+      ,	'PUSH'
+   }
 
-	local script_mode = ctx.script_mode
-	local blink = ctx.blink
+   local blink = ctx.blink
 
-	for k,v in ipairs(names) do
-	   if script_mode == 'classic' and k>2 then break end
-	   s.level(blink.menu[k] and MED or LOW)
-	   s.rect(left_border,(height*k)+1,128-left_border,-height)
-	   s.fill()
+   for k,v in ipairs(names) do
+      s.level(blink.menu[k] and MED or LOW)
+      s.rect(left_border,(height*k)+1,128-left_border,-height)
+      s.fill()
 
-	   s.level(blink.menu[k] and OFF or MED)
-	   s.move(125,(height*k)-2)
-	   local str = ''
-	   if v == 'BPM' then
-	      str = blink.menu[k] and
-		 util.round(params:get('clock_tempo')) or 'BPM'
-	   elseif v == 'SWING' then
-	      str = blink.menu[k] and self.data:get_global_val('swing')..'%' or 'SWING'
-	   elseif v == 'STRETCH' then
-	      str = blink.menu[k] and self.data:get_global_val('stretch') or 'STRETCH'
-	   elseif v == 'PUSH' then
-	      str = blink.menu[k] and self.data:get_global_val('push') or 'PUSH'
-	   end
-	   s.text_right(str)
-	end
+      s.level(blink.menu[k] and OFF or MED)
+      s.move(125,(height*k)-2)
+      local str = ''
+      if v == 'BPM' then
+	 str = blink.menu[k] and
+	    util.round(params:get('clock_tempo')) or 'BPM'
+      elseif v == 'SWING' then
+	 str = blink.menu[k] and self.data:get_global_val('swing')..'%' or 'SWING'
+      elseif v == 'STRETCH' then
+	 str = blink.menu[k] and self.data:get_global_val('stretch') or 'STRETCH'
+      elseif v == 'PUSH' then
+	 str = blink.menu[k] and self.data:get_global_val('push') or 'PUSH'
+      end
+      s.text_right(str)
+   end
 
-	s.level(MED)
-	local h =height*#names
-	if script_mode == 'classic' then h = h / 2 end
-	s.rect(left_border,1,128-left_border,h)
-	s.stroke()
+   s.level(MED)
+   local h = height*#names
+
+   s.rect(left_border,1,128-left_border,h)
+   s.stroke()
 end
 
 function Graphics.description_window()
-	s.level(HIGH)
-	s.rect(0,52,128,-20)
-	s.fill()
-	s.level(LOW)
-	s.rect(1,53,127,-21)
-	s.stroke()
+   s.level(HIGH)
+   s.rect(0,52,128,-20)
+   s.fill()
+   s.level(LOW)
+   s.rect(1,53,127,-21)
+   s.stroke()
 end
 
 function Graphics:post()
-	s.level(HIGH)
-	s.rect(0,64,128,-10)
-	s.fill()
-	s.move(1,62)
-	s.level(0)
-	s.text('\u{0bb}')
-	s.move(8,62)
-	s.text(string.upper(self.ctx.post_buffer))
+   s.level(HIGH)
+   s.rect(0,64,128,-10)
+   s.fill()
+   s.move(1,62)
+   s.level(0)
+   s.text('\u{0bb}')
+   s.move(8,62)
+   s.text(string.upper(self.ctx.post_buffer))
 end
 
 return Graphics
