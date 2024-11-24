@@ -124,7 +124,6 @@ function Prms:add_globals()
    data:add_option('loop_sync', 'LOOP SYNC', defs.div_sync_modes)
    data:add_trigger('reset_all', 'RESET')
 
-   tab.print(self.ctx.transport)
    data:set_action('reset_all', function(_) self.ctx.transport:reset_all() end)
    data:add_trigger('advance_all', 'ADVANCE ALL')
    data:set_action('advance_all', function() self.ctx.transport:advance_all() end)

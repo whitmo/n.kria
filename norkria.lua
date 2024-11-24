@@ -35,8 +35,6 @@ WHAT GOES IN THIS FILE:
 
 ]]--
 
-local tu = require 'tabutil'
-
 local defaults = include('lib/defaults')
 local ctx = include("lib/context")
 
@@ -55,7 +53,10 @@ function init()
 
    hs.init()
 
-   ctx.visual_metro = metro.init(redraw, 1/15, -1)
+   ctx.visual_metro = metro.init(
+      function()
+	 ctx.screen_graphics:render()
+      end, 1/16, -1)
 
    ctx.grid_metro = metro.init(
       function()

@@ -3,11 +3,86 @@
    - everything related to how grid looks
 ]]--
 
-local Graphics = {}
 local defaults = include("lib/defaults")
-
+local tab = require "tabutil"
 local HIGH, MED, LOW, OFF = defaults.HIGH, defaults.MED, defaults.LOW, defaults.OFF
 local NUM_TRACKS = defaults.NUM_TRACKS
+
+local Graphics = {
+   handlers = {
+      overlay = {
+	 none = function(self) self:page_handlers() end,
+	 time = function(self) self:config_1() end,
+	 options = function(self) self:config_2() end,
+	 -- patchers = function(self) self:patchers() end,
+      },
+      page = {
+	 scale = function(self) self:extended_scale() end,
+	 track_options = function(self) self:track_options() end,
+	 pattern = function(self)
+	    if self.data:get_global_val('ms_active') == 1 then
+	       self:meta_sequence()
+	    else
+	       self:pattern()
+	    end
+	 end,
+	 trig = function(self) self:trig() end,
+	 retrig = function(self) self:retrig() end,
+	 note = function(self) self:note() end,
+	 transpose = function(self) self:transpose() end,
+	 octave = function(self) self:octave() end,
+	 slide = function(self) self:slide() end,
+	 gate = function(self) self:gate() end,
+	 velocity = function(self) self:velocity() end,
+      },
+      other = {
+	 meta_sequence = function(self) self:meta_sequence() end,
+	 time_mod = function(self) self:time() end,
+	 prob_mod = function(self) self:prob() end,
+      }
+
+   },
+   modkeys = {
+      'loop',
+      'time',
+      'prob',
+   }
+}
+
+function Graphics:new(ctx)
+   tab.print({self, ctx})
+end
+
+function Graphics:page_handlers()
+   local data = self.data
+
+   local p = data:get_page_name()
+   local mod = data:get_global_val('mod')
+   local modkey = self.modkeys[mod]
+
+   modkey = modkey and modkey .. '_mod' or false
+
+   local ph = self.handlers.page[p]
+
+   ph = ph and ph or self.handlers.other[modkey]
+
+   local status, err
+   if ph then
+      status, err = pcall(
+	 function() ph(self) end
+      )
+   else
+      error("No page handler found for "..p .. " or " .. modkey)
+   end
+
+   if err then error(status, err) end
+
+   self:tracks()
+   self:pages()
+   self:modifiers()
+
+end
+
 
 function Graphics:from_ctx(ctx)
    self:init(ctx, ctx.data, ctx.grid)
@@ -19,6 +94,45 @@ function Graphics:init(ctx, data, grid)
    self.g = grid
    self.grid = grid
    self.ctx = ctx
+end
+
+
+function Graphics:render()
+   local g = self.g
+   if self.grid == nil then error('grid not connected') end
+   local data = self.data
+   local ctx = self.ctx
+
+   ctx.waver_flipflop = not ctx.waver_flipflop
+   if ctx.waver_flipflop then
+      ctx.wavery_light = ctx.wavery_light + ctx.waver_dir
+      if ctx.wavery_light > MED+1 then
+	 ctx.waver_dir = -1
+      elseif ctx.wavery_light < MED-1 then
+	 ctx.waver_dir = 1
+      end
+   end
+
+   g:all(0)
+
+   -- \/\/ these are in order of precedence \/\/
+
+   local overlay = data:get_overlay()
+
+   local status, err
+   local oh = self.handlers.overlay[overlay]
+
+   if oh then
+      status, err = pcall(
+	 function() oh(self) end
+      )
+      if not err then return end
+      error(status, err)
+   end
+   
+   error("No overlay handler found for "..overlay)
+
+   g:refresh()
 end
 
 function Graphics:trig()
@@ -61,61 +175,7 @@ function Graphics:trig()
 end
 
 
-function Graphics:render()
-   local g = self.g
-   if self.grid == nil then error('grid not connected') end
-   local data = self.data
-   local ctx = self.ctx
 
-   ctx.waver_flipflop = not ctx.waver_flipflop
-   if ctx.waver_flipflop then
-      ctx.wavery_light = ctx.wavery_light + ctx.waver_dir
-      if ctx.wavery_light > MED+1 then
-	 ctx.waver_dir = -1
-      elseif ctx.wavery_light < MED-1 then
-	 ctx.waver_dir = 1
-      end
-   end
-
-   g:all(0)
-
-   -- \/\/ these are in order of precedence \/\/
-   local p = data:get_page_name()
-   local overlay = data:get_overlay()
-
-   if overlay == 'time' then self:config_1()
-   elseif overlay == 'options' then self:config_2()
-   elseif overlay == 'patchers' then self:patchers()
-   elseif p == 'scale' then
-	 self:extended_scale()
-   elseif p == 'track options' then
-      self:track_options()
-   elseif p == 'pattern' then
-      if data:get_global_val('ms_active') == 1 then
-	 self:meta_sequence()
-      else
-	 self:pattern()
-      end
-   elseif data:get_global_val('mod') == 3 then self:time()
-   elseif data:get_global_val('mod') == 4 then self:prob()
-   elseif p == 'trig' then self:trig()
-   elseif p == 'retrig' then self:retrig()
-   elseif p == 'note' then self:note()
-   elseif p == 'transpose' then self:transpose()
-   elseif p == 'octave' then self:octave()
-   elseif p == 'slide' then self:slide()
-   elseif p == 'gate' then self:gate()
-   elseif p == 'velocity' then self:velocity()
-   end
-
-   if overlay == 'none' then
-      self:tracks()
-      self:pages()
-      self:modifiers()
-   end
-
-   g:refresh()
-end
 
 -- function Graphics:patchers()
 -- 	local l;
@@ -151,12 +211,21 @@ function Graphics:config_1()
    -- note div sync
    l = data:get_global_val('note_div_sync') == 1 and HIGH or MED
    for i=1,4 do g:led(i,5,l) end
-   g:led(1,6,l);g:led(4,6,l);g:led(1,7,l);g:led(4,7,l)
+
+   g:led(1,6,l)
+   g:led(4,6,l)
+   g:led(1,7,l)
+   g:led(4,7,l)
+
    for i=1,4 do g:led(i,8,l) end
 
    -- div cue
    l = data:get_global_val('div_cue') == 1 and HIGH or MED
-   g:led(8,7,l);g:led(9,7,l);g:led(8,8,l);g:led(9,8,l)
+
+   g:led(8,7,l)
+   g:led(9,7,l)
+   g:led(8,8,l)
+   g:led(9,8,l)
 
    -- div sync
    l = data:get_global_val('div_sync') == 2 and HIGH or MED

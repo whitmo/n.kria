@@ -3,8 +3,7 @@ local mu = require 'musicutil'
 
 local Transport = {}
 
-
-function Transport:init(ctx, data, defaults) -- @@ explode or create special .init_via_ctx function
+function Transport:init(ctx, data, defaults)
    self.data = data
    self.ctx = ctx
    self.defaults = defaults

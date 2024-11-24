@@ -69,14 +69,16 @@ function gkeys:track_select(x,_,z,_)
    self.ctx.last_touched_track = x
    local data = self.ctx.data
    local kbuf = self.kbuf
-   if data:get_mod_key() == 'loop' and z == 1 then
-      data:delta_track_val(x,'mute',1)
-      self:post('t'..x..' '..((data:get_track_val(x,'mute') == 1) and 'mute' or 'unmute'))
-   elseif data:get_mod_key() == 'time' and z == 1 then
-      data:set_active_track(x)
-      self.ctx.just_pressed_track = true
-   elseif z == 1 then
-      data:set_active_track(x)
+   local mod_key = data:get_mod_key()
+   if z == 1 then
+      if mod_key  == 'loop' then
+	 data:delta_track_val(x,'mute',1)
+	 self:post('t'..x..' '..((data:get_track_val(x,'mute') == 1) and 'mute' or 'unmute'))
+      elseif mod_key == 'time' then
+	 data:set_active_track(x)
+	 self.ctx.just_pressed_track = true
+      else
+	 data:set_active_track(x) end
    elseif z == 0 then
       if not (kbuf[1][8] or kbuf[2][8] or kbuf[3][8] or kbuf[4][8]) then
 	 self.ctx.just_pressed_track = false
@@ -99,6 +101,7 @@ function gkeys:page_select(x,_,z,_)
    end
    local data = self.ctx.data
    local page_map = self.defaults.page_map
+
    if page_map[x] == data:get_global_val('page') then -- if double-pressing...
       if tab.contains({6,7,8,9},x) then
 	 data:delta_global_val('alt_page',1)
@@ -115,22 +118,27 @@ function gkeys:page_select(x,_,z,_)
    end
 end
 
+
 function gkeys:resolve_mod_keys() -- intentionally prioritizes leftmost held mod key
    local mod_key_held = 0
    local kbuf = self.kbuf
    for i=1,3 do
-      if kbuf[10+i][8] then
+      local on = kbuf[10+i][8]
+      if on then
+	 print(on)
 	 mod_key_held = i
 	 break
       end
    end
 
    self.data:set_global_val('mod', mod_key_held+1)
+
    if mod_key_held == 0 then
       self.ctx.loop_first = -1
       self.ctx.loop_last = -1
    end
-   if not kbuf[12][8] then
+
+   if not kbuf[12][8] then -- not the time mod page
       self.meta:clear_temp_loops()
    end
    if self.data:get_global_val('mod') ~= 1 then
@@ -140,15 +148,18 @@ end
 
 function gkeys:resolve_loop_keys(x,y,z,t)
    local kbuf = self.kbuf
+   print("Z: " .. z)
+   local page_name = self.data:get_page_name()
    if z == 1 then -- press
+      print("RLOOP press " .. x .. "|" .. y)
       if self.ctx.loop_first == -1 then
-	 if self.data:get_page_name() == 'pattern' then
+	 if page_name == 'pattern' then
 	    self.ctx.loop_first = x+((y-3)*16)
 	 else
 	    self.ctx.loop_first = x
 	 end
       else
-	 if self.data:get_page_name() == 'pattern' then
+	 if page_name == 'pattern' then
 	    self.ctx.loop_last = x+((y-3)*16)
 	 else
 	    self.ctx.loop_last = x
@@ -156,8 +167,9 @@ function gkeys:resolve_loop_keys(x,y,z,t)
 	 self.meta:edit_loop_extended(t,self.ctx.loop_first, self.ctx.loop_last, kbuf[12][8])
       end
    else -- release
+      print("RLOOP release " .. x .. "|" .. y)
       if self.ctx.loop_last == -1 then
-	 self.meta:edit_loop_extended(t,self.ctx.loop_first, self.ctx.loop_last, kbuf[12][8])
+	 self.meta:edit_loop_extended(t, self.ctx.loop_first, self.ctx.loop_last, kbuf[12][8])
       else
 	 for i=1,16 do
 	    for j=1,7 do
@@ -181,7 +193,7 @@ function gkeys:resolve_loop_keys(x,y,z,t)
 end
 
 
-function gkeys:time_mod_extended(x,y,z,t)
+function gkeys:time_mod_extended(x,y,z,_)
    if z == 0 then return end
 
    local data = self.data
@@ -344,6 +356,9 @@ function gkeys:meta_sequence(x,y,z,_)
    end
 end
 
+function gkeys.none(_,_,_,_,_)
+   print("page NOOP")
+end
 function gkeys.trig_page(self, x,_,_,t)
    self.data:delta_step_val(t,'trig',x,1)
    local msg = 'trig '..x..' '.. (self.data:get_step_val(t,'trig',x) == 1 and 'on' or 'off')
@@ -439,12 +454,87 @@ function gkeys:advance_triggers_patcher(x,y,z,_)
    end
 end
 
+function gkeys.scale_page(self, x,y,z,t)
+   return self:extended_scale(x,y,z,t)
+end
+
+function gkeys.pattern_page(self, x,y,z,t)
+   if self.data:get_global_val('ms_active') == 1 then
+      self:meta_sequence(x,y,z,t)
+   else
+      self:pattern_overlay(x,y,z,t)
+   end
+end
+
+gkeys.overlay_handlers = {
+   time = function(self, x,y,z,t)
+      self:time_overlay(x,y,z,t)
+   end,
+   options = function(self,x,y,z,t)
+      if z == 1 then
+	 self:config_overlay(x,y,z,t)
+      end
+   end,
+   patchers = function(self, x,y,z,t)
+      self:patchers(x,y,z,t)
+   end,
+   none = function(self, x,y,z,t)
+      -- general handler
+      local data = self.data
+      local page_name = data:get_page_name()
+      local mod_key = data:get_mod_key()
+
+      if y == 8 then -- home row
+	 return self:homerow_keys(x,y,z,t)
+      end
+
+      if not mod_key then
+	 print(">>> " .. mod_key .. " <| page: " .. page_name)
+      end
+
+      if z == 1 then -- mods not held
+	 return self[page_name..'_page'](self, x,y,z,t)
+      end
+      local handler = gkeys.mod_handlers[mod_key]
+      if handler then
+	 return handler(self, x,y,z,t)
+      end
+   end
+}
+
+gkeys.mod_handlers = {
+   loop = function(self, x,y,z,t) self:resolve_loop_keys(x,y,z,t) end,
+   time = function(self, x,y,z,t) self:time_mod_extended(x,y,z,t) end,
+   prob = function(self, x,y,z,t) self:prob_mod(x,y,z,t) end,
+   -- none = function(self, _,_,_,_) print("NO MOD") end,
+}
+
+function gkeys:homerow_keys(x,y,z,t)
+   -- patchers -- @@ remove?
+   if tab.contains({5,10,14}, x)
+      and self.kbuf[5][8]
+      and self.kbuf[10][8]
+      and self.kbuf[14][8] then
+      self.data:set_global_val('overlay', 4)
+      self:post('patcher: '..self.defaults.patchers[self.data:get_global_val('patcher')])
+      return
+   end
+
+   if tab.contains({1,2,3,4},x) then
+      self:track_select(x,y,z,t)
+   elseif tab.contains({6,7,8,9,15,16},x) then
+      self:page_select(x,y,z,t)
+   elseif tab.contains({11,12,13},x) then
+      self:resolve_mod_keys()
+   end
+end
+
 function gkeys:key(x,y,z)
-   -- print('grid:',x,y,z)
    local kbuf = self.kbuf
    local data = self.ctx.data
 
-   kbuf[x][y] = (z == 1)
+   kbuf[x][y] = z == 1 and 1 or 0
+
    local t
    local NUM_TRACKS = self.ctx.defaults.NUM_TRACKS
    if data:get_page_name() == 'trig' and y <= NUM_TRACKS then
@@ -453,54 +543,8 @@ function gkeys:key(x,y,z)
       t = data:at()
    end
 
-   -- key processing
-   local overlay = data:get_overlay()
-   if overlay == 'time' then
-      self:time_overlay(x,y,z,t)
-   elseif overlay == 'options' then
-      if z == 1 then
-	 self:config_overlay(x,y,z,t)
-      end
-   elseif overlay == 'patchers' then
-      self:patchers(x,y,z,t)
-   elseif overlay == 'none' then -- no overlay
-      if y == 8 then
-	 if tab.contains({5,10,14},x) then
-	    if kbuf[5][8] and kbuf[10][8] and kbuf[14][8] then
-	       data:set_global_val('overlay',4)
-	       self:post('patcher: '..self.defaults.patchers[data:get_global_val('patcher')])
-	    end
-	 elseif tab.contains({1,2,3,4},x) then
-	    self:track_select(x,y,z,t)
-	 elseif tab.contains({6,7,8,9,15,16},x) then
-	    self:page_select(x,y,z,t)
-	 elseif tab.contains({11,12,13},x) then
-	    self:resolve_mod_keys()
-	 end
-      elseif y <= 7 then -- main field
-	 local mod_key = data:get_mod_key() -- @@ refactor to use dispatch
-	 if data:get_page_name() == 'scale' then
-	    self:extended_scale(x,y,z,t)
-	 elseif mod_key == 'loop' then
-	    self:resolve_loop_keys(x,y,z,t)
-	 elseif data:get_page_name() == 'pattern' then
-	    if data:get_global_val('ms_active') == 1 then
-	       self:meta_sequence(x,y,z,t)
-	    else
-	       self:pattern_overlay(x,y,z,t)
-	    end
-	 elseif mod_key == 'time' then
-	    self:time_mod_extended(x,y,z,t)
-	 elseif mod_key == 'prob' then
-	    self:prob_mod(x,y,z,t)
-	 else -- mods not held
-	    if z == 1 then
-	       local page_name = data:get_page_name()
-	       self[page_name..'_page'](self, x,y,z,t)
-	    end
-	 end
-      end
-   end
+   -- key processing dispatch tree
+   gkeys.overlay_handlers[data:get_overlay()](self, x,y,z,t)
 end
 
 

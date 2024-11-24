@@ -127,6 +127,11 @@ function Data:get_track_val(track, name)
 end
 
 function Data:get_page_val(track, page, name)
+   local args = {track=track,page=page,name=name}
+   if tab.contains(args, nil) then
+      error("MISSING page val arg: \n" .. tab.print(args))
+   end
+
    if pattern_page_attrs[name] then
       local default = self.ctx.defaults.pattern_page_info[name].default
       local pt = self.patterns[self.pattern]

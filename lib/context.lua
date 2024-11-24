@@ -87,10 +87,8 @@ function Context:redraw()
    return self.screen_graphics:render()
 end
 
-function Context:init()
-   self.midi = midi.connect()
-   self.grid = grid.connect()
-
+function Context:init_dependencies()
+   -- @@ loop
    self.data = self.data:from_ctx(self)  -- @@init order dep
    self.transport = transport:from_ctx(self)
    self.prms = prms:from_ctx(self)       -- ^^
@@ -98,8 +96,14 @@ function Context:init()
    self.meta = meta:from_ctx(self)
    self.screen_graphics = screen_graphics:from_ctx(self)
    self.gkeys = gkeys:from_ctx(self)
-
    self.grid_graphics = grid_graphics:from_ctx(self)
+end
+
+function Context:init()
+   self.midi = midi.connect()
+   self.grid = grid.connect()
+
+   self:init_dependencies()
 
    self.last_touched_track = self.data:at()
    self.last_touched_page = self.data:get_page_name()
@@ -115,7 +119,7 @@ function Context:init()
    self.coros.step_ticker = clock.run(step_ticker)
 
    self.coros.intro = clock.run(function () self:intro() end)
-   self.phase = "init"
+   self.phase = "initialized"
    return self
 end
 
@@ -124,9 +128,9 @@ function Context:intro()
    clock.sleep(0.1)
    params:bang()
    clock.sleep(2)
-   self:post('by @zbs', true)
+   self:post('rework by @whitmo', true)
    clock.sleep(2)
-   self:post('based on kria by @tehn', true)
+   self:post('based on kria by @tehn and n.kria by @zbs', true)
    clock.sleep(2)
    self:post('see splash for controls', true)
 end

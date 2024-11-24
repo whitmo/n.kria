@@ -228,9 +228,11 @@ function Meta:get_page_copy(t, page)
    r['loop_last'] = empty and 6 or self.data:get_page_val(t,page,'loop_last')
    r['divisor'] = empty and 1 or self.data:get_page_val(t,page,'divisor')
    r['cued_divisor'] = empty and 0 or self.data:get_page_val(t,page,'cued_divisor')
+
    r.vals = {}
    r.probs = {}
    r.subtrigs = {}
+
    for i=1,16 do
       table.insert(r.vals,empty and 0 or self.data:get_step_val(t,page,i))
       table.insert(r.probs,empty and 4 or self.data:get_step_val(t,page,i, 'prob'))
