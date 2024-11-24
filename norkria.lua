@@ -38,6 +38,7 @@ WHAT GOES IN THIS FILE:
 local defaults = include('lib/defaults')
 local ctx = include("lib/context")
 
+-- @@ is this really necessary?
 ctx:preinit(defaults)
 
 local hs = include('lib/dualdelay')
