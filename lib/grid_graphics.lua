@@ -11,10 +11,10 @@ local NUM_TRACKS = defaults.NUM_TRACKS
 local Graphics = {
    handlers = {
       overlay = {
-	 none = function(self) self:page_handlers() end,
-	 time = function(self) self:config_1() end,
-	 options = function(self) self:config_2() end,
-	 -- patchers = function(self) self:patchers() end,
+	      none = function(self) self:page_handlers() end,
+	      time = function(self) self:config_1() end,
+	      options = function(self) self:config_2() end,
+	      patchers = function(self) self:patchers() end,
       },
       page = {
 	 scale = function(self) self:extended_scale() end,
@@ -68,14 +68,11 @@ function Graphics:page_handlers()
 
    local status, err
    if ph then
-      status, err = pcall(
-	 function() ph(self) end
-      )
+      status, err = pcall(function() ph(self) end)
+      if not status then error(err) end
    else
       error("No page handler found for "..p .. " or " .. modkey)
    end
-
-   if err then error(status, err) end
 
    self:tracks()
    self:pages()
@@ -115,24 +112,21 @@ function Graphics:render()
 
    g:all(0)
 
-   -- \/\/ these are in order of precedence \/\/
-
    local overlay = data:get_overlay()
 
-   local status, err
    local oh = self.handlers.overlay[overlay]
 
+   local status, err
    if oh then
       status, err = pcall(
-	 function() oh(self) end
+	       function() oh(self) end
       )
-      if not err then return end
-      error(status, err)
+      if status then return g:refresh() end
+   else
+     err = "No overlay handler found for "..overlay
    end
-   
-   error("No overlay handler found for "..overlay)
-
    g:refresh()
+   return error(err)
 end
 
 function Graphics:trig()
